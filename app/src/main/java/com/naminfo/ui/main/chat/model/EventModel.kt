@@ -1,0 +1,146 @@
+package com.naminfo.ui.main.chat.model
+
+import android.graphics.drawable.Drawable
+import androidx.annotation.WorkerThread
+import androidx.core.content.res.ResourcesCompat
+import java.util.Locale
+import com.naminfo.DiyaOneApplication.Companion.coreContext
+import com.naminfo.R
+import org.linphone.core.EventLog
+import com.naminfo.utils.AppUtils
+import com.naminfo.utils.LinphoneUtils
+
+class EventModel
+    @WorkerThread
+    constructor(private val eventLog: EventLog) {
+    val text: String
+
+    val icon: Drawable?
+
+    init {
+        val name = getName()
+
+        text = when (eventLog.type) {
+            EventLog.Type.ConferenceCreated -> AppUtils.getString(
+                R.string.conversation_event_conference_created
+            )
+            EventLog.Type.ConferenceTerminated -> AppUtils.getString(
+                R.string.conversation_event_conference_destroyed
+            )
+            EventLog.Type.ConferenceParticipantAdded -> AppUtils.getFormattedString(
+                R.string.conversation_event_participant_added,
+                name
+            )
+            EventLog.Type.ConferenceParticipantRemoved -> AppUtils.getFormattedString(
+                R.string.conversation_event_participant_removed,
+                name
+            )
+            EventLog.Type.ConferenceSubjectChanged -> AppUtils.getFormattedString(
+                R.string.conversation_event_subject_changed,
+                eventLog.subject.orEmpty()
+            )
+            EventLog.Type.ConferenceParticipantSetAdmin -> AppUtils.getFormattedString(
+                R.string.conversation_event_admin_set,
+                name
+            )
+            EventLog.Type.ConferenceParticipantUnsetAdmin -> AppUtils.getFormattedString(
+                R.string.conversation_event_admin_unset,
+                name
+            )
+            EventLog.Type.ConferenceParticipantDeviceAdded -> AppUtils.getFormattedString(
+                R.string.conversation_event_device_added,
+                name
+            )
+            EventLog.Type.ConferenceParticipantDeviceRemoved -> AppUtils.getFormattedString(
+                R.string.conversation_event_device_removed,
+                name
+            )
+            EventLog.Type.ConferenceEphemeralMessageEnabled -> AppUtils.getString(
+                R.string.conversation_event_ephemeral_messages_enabled
+            )
+            EventLog.Type.ConferenceEphemeralMessageDisabled -> AppUtils.getString(
+                R.string.conversation_event_ephemeral_messages_disabled
+            )
+            EventLog.Type.ConferenceEphemeralMessageLifetimeChanged -> AppUtils.getFormattedString(
+                R.string.conversation_event_ephemeral_messages_lifetime_changed,
+                LinphoneUtils.formatEphemeralExpiration(eventLog.ephemeralMessageLifetime).lowercase(
+                    Locale.getDefault()
+                )
+            )
+            EventLog.Type.ConferenceSecurityEvent -> {
+                when (eventLog.securityEventType) {
+                    EventLog.SecurityEventType.SecurityLevelDowngraded -> AppUtils.getFormattedString(
+                        R.string.conversation_event_security_event_level_downgraded, name
+                    )
+                    EventLog.SecurityEventType.ParticipantMaxDeviceCountExceeded -> AppUtils.getFormattedString(
+                        R.string.conversation_event_security_event_max_participant_count_exceeded, name
+                    )
+                    EventLog.SecurityEventType.EncryptionIdentityKeyChanged -> AppUtils.getFormattedString(
+                        R.string.conversation_event_security_event_lime_identity_key_changed, name
+                    )
+                    EventLog.SecurityEventType.ManInTheMiddleDetected -> AppUtils.getFormattedString(
+                        R.string.conversation_event_security_event_man_in_the_middle_detected, name
+                    )
+                    else -> eventLog.securityEventType.name
+                }
+            }
+            else -> {
+                eventLog.type.name
+            }
+        }
+
+        icon = ResourcesCompat.getDrawable(
+            coreContext.context.resources,
+            when (eventLog.type) {
+                EventLog.Type.ConferenceEphemeralMessageEnabled,
+                EventLog.Type.ConferenceEphemeralMessageDisabled,
+                EventLog.Type.ConferenceEphemeralMessageLifetimeChanged -> {
+                    R.drawable.clock_countdown
+                }
+                EventLog.Type.ConferenceSecurityEvent -> {
+                    R.drawable.warning_circle
+                }
+                EventLog.Type.ConferenceSubjectChanged -> {
+                    R.drawable.pencil_simple
+                }
+                EventLog.Type.ConferenceParticipantAdded,
+                EventLog.Type.ConferenceCreated -> {
+                    R.drawable.door_open
+                }
+                EventLog.Type.ConferenceParticipantRemoved,
+                EventLog.Type.ConferenceTerminated -> {
+                    R.drawable.door
+                }
+                EventLog.Type.ConferenceParticipantDeviceAdded -> {
+                    R.drawable.user_circle_plus
+                }
+                EventLog.Type.ConferenceParticipantDeviceRemoved -> {
+                    R.drawable.user_circle_minus
+                }
+                EventLog.Type.ConferenceParticipantSetAdmin -> {
+                    R.drawable.user_circle_check
+                }
+                EventLog.Type.ConferenceParticipantUnsetAdmin -> {
+                    R.drawable.user_circle_dashed
+                }
+                else -> R.drawable.user_circle
+            },
+            coreContext.context.theme
+        )
+    }
+
+    @WorkerThread
+    fun getName(): String {
+        val address = if (eventLog.type == EventLog.Type.ConferenceSecurityEvent) {
+             eventLog.securityEventFaultyDeviceAddress
+        } else {
+            eventLog.participantAddress ?: eventLog.peerAddress
+        }
+        val name = if (address != null) {
+            coreContext.contactsManager.findDisplayName(address)
+        } else {
+            "<?>"
+        }
+        return name
+    }
+}

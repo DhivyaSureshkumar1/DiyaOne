@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/assistant_nav_graph"
+    app:startDestination="@id/thirdPartySipAccountLoginFragment">
+
+    <fragment
+        android:id="@+id/thirdPartySipAccountLoginFragment"
+        android:name="com.naminfo.ui.assistant.fragment.ThirdPartySipAccountLoginFragment"
+        android:label="One Time Registration"
+        tools:layout="@layout/assistant_third_party_sip_account_login_fragment" />
+
+    <fragment
+        android:id="@+id/permissionsFragment"
+        android:name="com.naminfo.ui.assistant.fragment.PermissionsFragment"
+        android:label="Permissions"
+        tools:layout="@layout/assistant_permissions_fragment">
+        <action
+            android:id="@+id/action_permissionsFragment_to_thirdPartySipAccountLoginFragment"
+            app:destination="@id/thirdPartySipAccountLoginFragment"
+            app:launchSingleTop="true"
+            app:popUpTo="@id/permissionsFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <action
+        android:id="@+id/action_global_permissionsFragment"
+        app:destination="@id/permissionsFragment" />
+
+    <!-- Legacy onboarding destinations remain declared only so their compiled classes
+         stay compatible. Nothing in the active flow navigates to the landing/welcome UI. -->
+    <fragment android:id="@+id/landingFragment" android:name="com.naminfo.ui.assistant.fragment.LandingFragment">
+        <action android:id="@+id/action_landingFragment_to_qrCodeScannerFragment" app:destination="@id/qrCodeScannerFragment" />
+        <action android:id="@+id/action_landingFragment_to_thirdPartySipAccountWarningFragment" app:destination="@id/thirdPartySipAccountWarningFragment" />
+        <action android:id="@+id/action_landingFragment_to_registerFragment" app:destination="@id/registerFragment" />
+        <action android:id="@+id/action_landingFragment_to_thirdPartySipAccountLoginFragment" app:destination="@id/thirdPartySipAccountLoginFragment" />
+        <action android:id="@+id/action_landingFragment_to_helpFragment" app:destination="@id/helpFragment" />
+        <action android:id="@+id/action_landingFragment_to_recoverAccountFragment" app:destination="@id/recoverAccountFragment" />
+    </fragment>
+    <fragment android:id="@+id/registerFragment" android:name="com.naminfo.ui.assistant.fragment.RegisterFragment">
+        <action android:id="@+id/action_registerFragment_to_registerCodeConfirmationFragment" app:destination="@id/registerCodeConfirmationFragment" />
+    </fragment>
+    <fragment android:id="@+id/registerCodeConfirmationFragment" android:name="com.naminfo.ui.assistant.fragment.RegisterCodeConfirmationFragment" />
+    <fragment android:id="@+id/qrCodeScannerFragment" android:name="com.naminfo.ui.assistant.fragment.QrCodeScannerFragment" />
+    <fragment android:id="@+id/thirdPartySipAccountWarningFragment" android:name="com.naminfo.ui.assistant.fragment.ThirdPartySipAccountWarningFragment">
+        <action android:id="@+id/action_thirdPartySipAccountWarningFragment_to_thirdPartySipAccountLoginFragment" app:destination="@id/thirdPartySipAccountLoginFragment" />
+        <action android:id="@+id/action_thirdPartySipAccountWarningFragment_to_registerFragment" app:destination="@id/registerFragment" />
+    </fragment>
+    <fragment android:id="@+id/helpFragment" android:name="com.naminfo.ui.main.help.fragment.HelpFragment">
+        <action android:id="@+id/action_helpFragment_to_debugFragment" app:destination="@id/debugFragment" />
+    </fragment>
+    <fragment android:id="@+id/debugFragment" android:name="com.naminfo.ui.main.help.fragment.DebugFragment" />
+    <fragment android:id="@+id/recoverAccountFragment" android:name="com.naminfo.ui.assistant.fragment.RecoverAccountFragment" />
+</navigation>

@@ -1,0 +1,255 @@
+package com.naminfo.ui
+
+import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.content.res.Configuration
+import android.content.res.Resources
+import android.net.Uri
+import android.os.Bundle
+import android.provider.Settings
+import android.view.ViewGroup
+import android.view.WindowManager
+import androidx.annotation.DrawableRes
+import androidx.annotation.MainThread
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.children
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import com.naminfo.DiyaOneApplication.Companion.corePreferences
+import com.naminfo.R
+import com.naminfo.compatibility.Compatibility
+import org.linphone.core.tools.Log
+import com.naminfo.utils.ToastUtils
+import com.naminfo.utils.slideInToastFromTop
+import com.naminfo.utils.slideInToastFromTopForDuration
+
+@MainThread
+open class GenericActivity : AppCompatActivity() {
+    companion object {
+        private const val TAG = "[Generic Activity]"
+    }
+
+    private lateinit var toastsArea: ViewGroup
+
+    private var mainColor: String = "mineral_blue"
+
+    override fun getTheme(): Resources.Theme {
+        mainColor = corePreferences.themeMainColor
+        val theme = super.theme
+        when (mainColor) {
+            "terracotta" -> theme.applyStyle(R.style.Theme_LinphoneTerracotta, true)
+            "lavender" -> theme.applyStyle(R.style.Theme_LinphoneLavender, true)
+            "honey" -> theme.applyStyle(R.style.Theme_LinphoneHoney, true)
+            "burgundy" -> theme.applyStyle(R.style.Theme_LinphoneBurgundy, true)
+            "mint" -> theme.applyStyle(R.style.Theme_LinphoneMint, true)
+            "coral" -> theme.applyStyle(R.style.Theme_LinphoneCoral, true)
+            "plum" -> theme.applyStyle(R.style.Theme_LinphonePlum, true)
+            "titanium" -> theme.applyStyle(R.style.Theme_LinphoneTitanium, true)
+            "mineral_blue" -> theme.applyStyle(R.style.Theme_LinphoneMineralBlue, true)
+            else -> theme.applyStyle(R.style.Theme_Linphone, true)
+        }
+        return theme
+    }
+
+    @SuppressLint("SourceLockedOrientationActivity")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        enableWindowSecureMode(corePreferences.enableSecureMode)
+
+        val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        val darkModeEnabled = corePreferences.darkMode
+        Log.i(
+            "$TAG Theme selected in config file is [${if (darkModeEnabled == -1) "auto" else if (darkModeEnabled == 0) "light" else "dark"}]"
+        )
+        when (nightMode) {
+            Configuration.UI_MODE_NIGHT_NO, Configuration.UI_MODE_NIGHT_UNDEFINED -> {
+                if (darkModeEnabled == 1) {
+                    Compatibility.forceDarkMode(this)
+                }
+            }
+            Configuration.UI_MODE_NIGHT_YES -> {
+                if (darkModeEnabled == 0) {
+                    Compatibility.forceLightMode(this)
+                }
+            }
+        }
+
+        super.onCreate(savedInstanceState)
+    }
+
+    protected fun checkMainColorTheme() {
+        if (mainColor != corePreferences.themeMainColor) {
+            Log.i("$TAG Main color setting has changed, re-creating activity")
+            recreate()
+        }
+    }
+
+    fun setUpToastsArea(viewGroup: ViewGroup) {
+        toastsArea = viewGroup
+    }
+
+    fun showGreenToast(
+        message: String,
+        @DrawableRes icon: Int,
+        duration: Long = 4000,
+        doNotTint: Boolean = false
+    ) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.Main) {
+                val greenToast = ToastUtils.getGreenToast(
+                    this@GenericActivity,
+                    toastsArea,
+                    message,
+                    icon,
+                    doNotTint
+                )
+                toastsArea.addView(greenToast.root)
+
+                greenToast.root.slideInToastFromTopForDuration(
+                    toastsArea,
+                    lifecycleScope,
+                    duration
+                )
+            }
+        }
+    }
+
+    fun showBlueToast(
+        message: String,
+        @DrawableRes icon: Int,
+        duration: Long = 4000,
+        doNotTint: Boolean = false
+    ) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.Main) {
+                val blueToast = ToastUtils.getBlueToast(
+                    this@GenericActivity,
+                    toastsArea,
+                    message,
+                    icon,
+                    doNotTint
+                )
+                toastsArea.addView(blueToast.root)
+
+                blueToast.root.slideInToastFromTopForDuration(
+                    toastsArea,
+                    lifecycleScope,
+                    duration
+                )
+            }
+        }
+    }
+
+    fun showRedToast(
+        message: String,
+        @DrawableRes icon: Int,
+        duration: Long = 4000,
+        doNotTint: Boolean = false
+    ) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.Main) {
+                val redToast = ToastUtils.getRedToast(
+                    this@GenericActivity,
+                    toastsArea,
+                    message,
+                    icon,
+                    doNotTint
+                )
+                toastsArea.addView(redToast.root)
+
+                redToast.root.slideInToastFromTopForDuration(
+                    toastsArea,
+                    lifecycleScope,
+                    duration
+                )
+            }
+        }
+    }
+
+    fun showPersistentRedToast(
+        message: String,
+        @DrawableRes icon: Int,
+        tag: String,
+        doNotTint: Boolean = false
+    ) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.Main) {
+                val redToast =
+                    ToastUtils.getRedToast(
+                        this@GenericActivity,
+                        toastsArea,
+                        message,
+                        icon,
+                        doNotTint
+                    )
+                redToast.root.tag = tag
+                toastsArea.addView(redToast.root)
+
+                redToast.root.slideInToastFromTop(
+                    toastsArea,
+                    true
+                )
+            }
+        }
+    }
+
+    fun removePersistentRedToast(tag: String) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.Main) {
+                for (child in toastsArea.children) {
+                    if (child.tag == tag) {
+                        toastsArea.removeView(child)
+                    }
+                }
+            }
+        }
+    }
+
+    fun goToAndroidPermissionSettings() {
+        Log.i("$TAG Going into Android settings for our app")
+        try {
+            val intent = Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts(
+                    "package",
+                    packageName, null
+                )
+            )
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+        } catch (anfe: ActivityNotFoundException) {
+            Log.e("$TAG Failed to go to android settings: $anfe")
+        }
+    }
+
+    protected fun enableWindowSecureMode(enable: Boolean) {
+        val flags: Int = window.attributes.flags
+        if ((enable && flags and WindowManager.LayoutParams.FLAG_SECURE != 0) ||
+            (!enable && flags and WindowManager.LayoutParams.FLAG_SECURE == 0)
+        ) {
+            Log.d(
+                "$TAG Secure flag is already ${if (enable) "enabled" else "disabled"}, skipping..."
+            )
+            return
+        }
+
+        if (enable) {
+            Log.i("$TAG Secure flag added to window")
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            Log.w("$TAG Secure flag cleared from window")
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+
+        if (window.decorView.isAttachedToWindow) {
+            Log.d("$TAG Redrawing window decorView to apply flag")
+            try {
+                windowManager.updateViewLayout(window.decorView, window.attributes)
+            } catch (ise: IllegalStateException) {
+                Log.e("$TAG Failed to update window's decorView layout: $ise")
+            }
+        }
+    }
+}

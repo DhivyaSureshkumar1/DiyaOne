@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:bind="http://schemas.android.com/tools">
+    <data>
+        <import type="android.view.View" />
+        <variable name="viewModel" type="com.naminfo.ui.assistant.viewmodel.ThirdPartySipAccountLoginViewModel" />
+    </data>
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/color_main2_000">
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <ImageView
+                    android:id="@+id/icons"
+                    android:layout_width="200dp"
+                    android:layout_height="wrap_content"
+                    android:adjustViewBounds="true"
+                    android:paddingTop="100dp"
+                    android:contentDescription="@null"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/linphone_splashscreen_branding"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:tint="?attr/color_main1_500" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/third_party_login_title"
+                    style="@style/assistant_page_title_style"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/top_bar_height"
+                    android:gravity="center"
+                    android:text="@string/assistant_login_third_party_sip_account_title"
+                    android:textColor="?attr/color_text"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/icons" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/username_label"
+                    style="@style/header_style"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="20dp"
+                    android:labelFor="@id/username"
+                    android:text="@{@string/assistant_registration_mobile_number + `*`}"
+                    app:layout_constraintStart_toStartOf="@id/mobile_number_row"
+                    app:layout_constraintTop_toBottomOf="@id/third_party_login_title" />
+
+                <LinearLayout
+                    android:id="@+id/mobile_number_row"
+                    android:layout_width="0dp"
+                    android:layout_height="50dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:orientation="horizontal"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/username_label"
+                    app:layout_constraintWidth_max="@dimen/text_input_max_width">
+
+                    <FrameLayout
+                        android:layout_width="110dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="8dp">
+
+                        <androidx.appcompat.widget.AppCompatSpinner
+                            android:id="@+id/country_code"
+                            style="@style/default_text_style"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="28dp"
+                            android:background="@drawable/edit_text_background"
+                            android:contentDescription="@string/assistant_login_country_code_optional"
+                            android:spinnerMode="dropdown"
+                            android:dropDownWidth="280dp"
+                            android:popupBackground="@drawable/shape_squircle_white_background" />
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_gravity="end|center_vertical"
+                            android:layout_marginEnd="8dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/caret_down"
+                            app:tint="?attr/color_main2_600" />
+                    </FrameLayout>
+
+                    <androidx.appcompat.widget.AppCompatEditText
+                        android:id="@+id/username"
+                        style="@style/default_text_style"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/edit_text_background"
+                        android:digits="0123456789"
+                        android:hint="@string/assistant_registration_mobile_number_hint"
+                        android:inputType="phone"
+                        android:maxLength="10"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:text="@={viewModel.username}"
+                        android:textColor="?attr/color_main2_600"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/display_name_label"
+                    style="@style/header_style"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="18dp"
+                    android:labelFor="@id/display_name"
+                    android:text="@string/sip_address_display_name"
+                    app:layout_constraintStart_toStartOf="@id/display_name"
+                    app:layout_constraintTop_toBottomOf="@id/mobile_number_row" />
+
+                <androidx.appcompat.widget.AppCompatEditText
+                    android:id="@+id/display_name"
+                    style="@style/default_text_style"
+                    android:layout_width="0dp"
+                    android:layout_height="50dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/edit_text_background"
+                    android:hint="@string/sip_address_display_name"
+                    android:inputType="text|textPersonName|textCapSentences"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:text="@={viewModel.displayName}"
+                    android:textColor="?attr/color_main2_600"
+                    android:textSize="14sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/display_name_label"
+                    app:layout_constraintWidth_max="@dimen/text_input_max_width" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/advanced_settings"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginEnd="10dp"
+                    android:checked="@={viewModel.expandAdvancedSettings}"
+                    android:padding="10dp"
+                    android:text="@string/settings_advanced_title"
+                    android:textColor="?attr/color_main2_600"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/display_name" />
+
+                <androidx.constraintlayout.widget.Group
+                    android:id="@+id/advanced_settings_group"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="@{viewModel.expandAdvancedSettings ? View.VISIBLE : View.GONE, default=gone}"
+                    app:constraint_referenced_ids="domain_label,domain,transport_label,transport,transport_caret" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/domain_label"
+                    style="@style/header_style"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="16dp"
+                    android:labelFor="@id/domain"
+                    android:text="@{@string/sip_address_domain + `*`}"
+                    app:layout_constraintStart_toStartOf="@id/domain"
+                    app:layout_constraintTop_toBottomOf="@id/advanced_settings" />
+
+                <androidx.appcompat.widget.AppCompatEditText
+                    android:id="@+id/domain"
+                    style="@style/default_text_style"
+                    android:layout_width="0dp"
+                    android:layout_height="50dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/edit_text_background"
+                    android:hint="@string/sip_address_domain"
+                    android:inputType="text|textUri"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:text="@={viewModel.domain}"
+                    android:textColor="?attr/color_main2_600"
+                    android:textSize="14sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/domain_label"
+                    app:layout_constraintWidth_max="@dimen/text_input_max_width" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/transport_label"
+                    style="@style/header_style"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="18dp"
+                    android:labelFor="@id/transport"
+                    android:text="@string/assistant_sip_account_transport_protocol"
+                    app:layout_constraintStart_toStartOf="@id/transport"
+                    app:layout_constraintTop_toBottomOf="@id/domain" />
+
+                <androidx.appcompat.widget.AppCompatSpinner
+                    android:id="@+id/transport"
+                    style="@style/default_text_style"
+                    android:layout_width="0dp"
+                    android:layout_height="50dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/edit_text_background"
+                    android:overlapAnchor="false"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:popupBackground="@drawable/shape_squircle_white_background"
+                    android:spinnerMode="dropdown"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/transport_label"
+                    app:layout_constraintWidth_max="@dimen/text_input_max_width" />
+
+                <ImageView
+                    android:id="@+id/transport_caret"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="20dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/caret_down"
+                    app:layout_constraintBottom_toBottomOf="@id/transport"
+                    app:layout_constraintEnd_toEndOf="@id/transport"
+                    app:layout_constraintTop_toTopOf="@id/transport"
+                    app:tint="?attr/color_main2_600" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/login"
+                    style="@style/primary_button_label_style"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="32dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="@dimen/screen_bottom_margin"
+                    android:enabled="@{viewModel.loginEnabled &amp;&amp; !viewModel.registrationInProgress, default=false}"
+                    android:onClick="@{() -> viewModel.login()}"
+                    android:text="@string/assistant_account_register"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/transport"
+                    app:layout_constraintWidth_max="@dimen/button_max_width" />
+
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </ScrollView>
+
+        <include
+            layout="@layout/operation_in_progress"
+            bind:visibility="@{viewModel.registrationInProgress}" />
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+</layout>

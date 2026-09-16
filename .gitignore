@@ -1,0 +1,45 @@
+*.iml
+
+# Gradle
+.gradle/
+.gradle-user-home/
+.android-user-home/
+/build
+**/build/
+
+# Local configuration
+/local.properties
+local.properties
+
+# Signing / Keystore
+keystore.properties
+*.jks
+*.keystore
+app/bc-android.keystore
+
+# Android Studio
+.idea/
+
+# Kotlin
+.kotlin/
+
+# Native build
+.externalNativeBuild/
+.cxx/
+
+# APK / build output
+app/debug/
+app/release/
+
+# JVM crash logs
+hs_err_pid*.log
+
+# Local recovery / backups
+recovery-backups/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Captures
+/captures
