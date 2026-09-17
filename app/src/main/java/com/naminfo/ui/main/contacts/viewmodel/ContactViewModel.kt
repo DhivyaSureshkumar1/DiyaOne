@@ -81,6 +81,9 @@ class ContactViewModel
     val videoCallDisabled = MutableLiveData<Boolean>()
 
     val audioCallDisabled = MutableLiveData(false)
+    // false = audio; true = video
+    val selectConferenceContactsEvent = MutableLiveData<Event<Boolean>>()
+    val conferenceDetails = MutableLiveData(false)
 
     private val permanentConferenceNumber: String?
         get() = if (::friend.isInitialized) {
@@ -313,36 +316,55 @@ class ContactViewModel
 
     @WorkerThread
     fun refreshContactInfo() {
-        val conferenceNumber = permanentConferenceNumber
-        audioCallDisabled.postValue(conferenceNumber == "3500")
-        videoCallDisabled.postValue(conferenceNumber == "5500" || !coreContext.core.isVideoEnabled)
-        chatDisabled.postValue(conferenceNumber != null || corePreferences.disableChat)
+        val isConference = isTakeConferenceContact()
+        val conferenceName = friend.name.orEmpty().trim()
+
+        val isAudioConference = isConference &&
+                conferenceName.equals("Audio Conference", ignoreCase = true)
+
+        val isVideoConference = isConference &&
+                conferenceName.equals("Video Conference", ignoreCase = true)
+
+        conferenceDetails.postValue(isConference)
+
+        audioCallDisabled.postValue(isVideoConference)
+        videoCallDisabled.postValue(
+            isAudioConference || !coreContext.core.isVideoEnabled
+        )
+        chatDisabled.postValue(
+            isConference || corePreferences.disableChat
+        )
+
         isFavourite.postValue(friend.starred)
-        // Do not show edit contact button for contacts not stored in a FriendList or
-        // if they are in a temporary one (for example if they are from a remote directory such as LDAP or CardDAV)
-        isStored.postValue(!coreContext.contactsManager.isContactTemporary(friend))
-        isReadOnly.postValue(conferenceNumber != null || friend.isReadOnly)
+        isStored.postValue(
+            !coreContext.contactsManager.isContactTemporary(friend)
+        )
+        isReadOnly.postValue(isConference || friend.isReadOnly)
         isNative.postValue(!friend.nativeUri.isNullOrEmpty())
 
         contact.value?.destroy()
         contact.postValue(ContactAvatarModel(friend))
 
-        val organization = friend.organization
-        company.postValue(organization.orEmpty())
+        company.postValue(friend.organization.orEmpty())
+        title.postValue(friend.jobTitle.orEmpty())
 
-        val jobTitle = friend.jobTitle
-        title.postValue(jobTitle.orEmpty())
+        // Keep these populated so the call buttons remain enabled.
+        // Hide the number section through conferenceDetails in the layout.
+        val callableNumbers =
+            friend.getListOfSipAddressesAndPhoneNumbers(listener)
 
-        // SIP-only contacts (including conference extensions) are callable too.
-        // ContactNumberOrAddressModel.displayNumber keeps the UI number-only.
-        val callableNumbers = friend.getListOfSipAddressesAndPhoneNumbers(listener)
-        // sipAddressesAndPhoneNumbers.postValue(ArrayList(callableNumbers))
         sipAddressesAndPhoneNumbers.postValue(
             ArrayList(callableNumbers.take(1))
         )
 
-        fetchDevicesAndTrust()
-        lookUpExistingChatRoom()
+        if (isConference) {
+            showContactTrustAndDevices.postValue(false)
+            expandDevicesTrust.postValue(false)
+            existingConversationId.postValue("")
+        } else {
+            fetchDevicesAndTrust()
+            lookUpExistingChatRoom()
+        }
     }
 
     @UiThread
@@ -445,13 +467,13 @@ class ContactViewModel
     @UiThread
     fun startAudioCall() {
         coreContext.postOnCoreThread {
-            if (permanentConferenceNumber == "3500") return@postOnCoreThread
-            val preferredAddress = getPreferredCallAddress()
-            if (preferredAddress != null) {
-                Log.i(
-                    "$TAG Calling preferred address for contact [${friend.name}] directly"
-                )
-                coreContext.startAudioCall(preferredAddress)
+            if (isTakeConferenceContact()) {
+                selectConferenceContactsEvent.postValue(Event(false))
+                return@postOnCoreThread
+            }
+
+            getPreferredCallAddress()?.let {
+                coreContext.startAudioCall(it)
             }
         }
     }
@@ -459,13 +481,13 @@ class ContactViewModel
     @UiThread
     fun startVideoCall() {
         coreContext.postOnCoreThread {
-            if (permanentConferenceNumber == "5500") return@postOnCoreThread
-            val preferredAddress = getPreferredCallAddress()
-            if (preferredAddress != null) {
-                Log.i(
-                    "$TAG Video calling preferred address for contact [${friend.name}] directly"
-                )
-                coreContext.startVideoCall(preferredAddress)
+            if (isTakeConferenceContact()) {
+                selectConferenceContactsEvent.postValue(Event(true))
+                return@postOnCoreThread
+            }
+
+            getPreferredCallAddress()?.let {
+                coreContext.startVideoCall(it)
             }
         }
     }
@@ -718,5 +740,10 @@ class ContactViewModel
         } else {
             Log.e("$TAG No default account found!")
         }
+    }
+
+    private fun isTakeConferenceContact(): Boolean {
+        return ::friend.isInitialized &&
+                friend.refKey.orEmpty().startsWith("conference:permanent:")
     }
 }

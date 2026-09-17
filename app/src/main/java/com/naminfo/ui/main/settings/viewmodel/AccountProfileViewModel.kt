@@ -271,8 +271,8 @@ class AccountProfileViewModel
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                signOutError.value =
-                    "Sign-out failed. Check your connection and retry."
+                val reason = error.message ?: error.javaClass.simpleName
+                signOutError.value = "Sign-out failed: $reason"
                 Log.e("$TAG Sign-out failed: $error")
             } finally {
                 signOutInProgress.value = false
@@ -306,6 +306,9 @@ class AccountProfileViewModel
                         message: String
                     ) {
                         if (changedAccount != target) return
+                        Log.i(
+                            "$TAG Sign-out registration state=$state, message=$message"
+                        )
                         if (completed || !continuation.isActive) return
 
                         when (state) {
@@ -486,7 +489,7 @@ class AccountProfileViewModel
         }
     }
 
-    @UiThread
+    /*@UiThread
     fun saveChangesWhenLeaving() {
         coreContext.postOnCoreThread {
             if (::account.isInitialized) {
@@ -508,6 +511,40 @@ class AccountProfileViewModel
                 account.params = copy
                 account.refreshRegister()
             }
+        }
+    }*/
+
+    @UiThread
+    fun saveChangesWhenLeaving() {
+        if (signOutInProgress.value == true) return
+
+        // Read the UI value before switching threads.
+        val newDisplayName = displayName.value.orEmpty().trim()
+
+        coreContext.postOnCoreThread { core ->
+            if (!::account.isInitialized) return@postOnCoreThread
+
+            // Never update an account that has already been removed.
+            if (core.accountList.none { it == account }) {
+                return@postOnCoreThread
+            }
+
+            // Do not modify registration while signing out or disabled.
+            val params = account.params
+            if (!params.isRegisterEnabled) return@postOnCoreThread
+
+            val address = params.identityAddress?.clone()
+                ?: return@postOnCoreThread
+
+            if (address.displayName.orEmpty() == newDisplayName) {
+                return@postOnCoreThread
+            }
+
+            address.displayName = newDisplayName
+
+            val updatedParams = params.clone()
+            updatedParams.identityAddress = address
+            account.params = updatedParams
         }
     }
 

@@ -2124,6 +2124,11 @@ class NotificationsManager
         }
     }
 
+    @WorkerThread
+    fun dismissMissedCallNotification() {
+        cancelNotification(MISSED_CALL_ID, MISSED_CALL_TAG)
+    }
+
     @AnyThread
     fun showPendingCallRedirectionNotification() {
         val allowCallRedirectIntent = getAllowCallRedirectionPendingIntent()

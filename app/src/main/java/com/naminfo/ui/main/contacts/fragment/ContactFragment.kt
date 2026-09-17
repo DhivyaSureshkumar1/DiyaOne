@@ -29,6 +29,10 @@ import com.naminfo.utils.ConfirmationDialogModel
 import com.naminfo.utils.DialogUtils
 import com.naminfo.utils.Event
 import androidx.core.net.toUri
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import com.naminfo.ui.main.contacts.viewmodel.ConferenceCallViewModel
+import com.naminfo.ui.main.contacts.viewmodel.ContactsListViewModel
 
 @UiThread
 class ContactFragment : SlidingPaneChildFragment() {
@@ -45,6 +49,15 @@ class ContactFragment : SlidingPaneChildFragment() {
     private var numberOrAddressPickerDialog: Dialog? = null
 
     private var bottomSheetDialog: BottomSheetDialogFragment? = null
+
+    private lateinit var conferenceViewModel: ConferenceCallViewModel
+    private lateinit var contactsListViewModel: ContactsListViewModel
+    private var conferencePicker: AlertDialog? = null
+
+    private data class ConferenceParticipant(
+        val name: String,
+        val number: String
+    )
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -80,6 +93,36 @@ class ContactFragment : SlidingPaneChildFragment() {
         val refKey = args.contactRefKey
         Log.i("$TAG Looking up for contact with ref key [$refKey]")
         viewModel.findContact(sharedViewModel.displayedFriend, refKey)
+
+        conferenceViewModel =
+            ViewModelProvider(this)[ConferenceCallViewModel::class.java]
+
+        contactsListViewModel =
+            ViewModelProvider(requireActivity())[ContactsListViewModel::class.java]
+
+        viewModel.selectConferenceContactsEvent.observe(viewLifecycleOwner) { event ->
+            event.consume { video ->
+                if (conferenceViewModel.inProgress.value != true) {
+                    showConferenceContactPicker(video)
+                } else {
+                    Toast.makeText(
+                        requireContext(),
+                        "Conference request is already in progress",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+
+        conferenceViewModel.errorEvent.observe(viewLifecycleOwner) { event ->
+            event.consume { message ->
+                Toast.makeText(
+                    requireContext(),
+                    message,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
 
         binding.setBackClickListener {
             goBack()
@@ -219,6 +262,98 @@ class ContactFragment : SlidingPaneChildFragment() {
         }
     }
 
+    private fun showConferenceContactPicker(video: Boolean) {
+        if (conferencePicker?.isShowing == true) return
+
+        // Use the existing matched contact list.
+        // Mobion contacts have ref keys in the form "mobion:9876543210".
+        val participants = contactsListViewModel.contactsList.value
+            .orEmpty()
+            .mapNotNull { model ->
+                if (!model.id.startsWith("mobion:")) {
+                    return@mapNotNull null
+                }
+
+                val number = model.id.removePrefix("mobion:").trim()
+                if (number.isEmpty()) return@mapNotNull null
+
+                ConferenceParticipant(
+                    name = model.contactName.orEmpty().ifBlank { number },
+                    number = number
+                )
+            }
+            .distinctBy { it.number }
+            .sortedBy { it.name.lowercase() }
+
+        if (participants.isEmpty()) {
+            Toast.makeText(
+                requireContext(),
+                "No contacts available. Wait for contacts to load or clear the contact search.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val selected = BooleanArray(participants.size)
+        val labels = participants.map {
+            "${it.name}\n${it.number}"
+        }.toTypedArray()
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle(
+                if (video) {
+                    "Select video conference users"
+                } else {
+                    "Select audio conference users"
+                }
+            )
+            .setMultiChoiceItems(labels, selected) { _, index, checked ->
+                selected[index] = checked
+            }
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Call", null)
+            .create()
+
+        conferencePicker = dialog
+
+        dialog.setOnDismissListener {
+            conferencePicker = null
+        }
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener {
+                    val numbers = participants.filterIndexed { index, _ ->
+                        selected[index]
+                    }.map { it.number }
+
+                    if (numbers.isEmpty()) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Select at least one contact",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@setOnClickListener
+                    }
+
+                    if (conferenceViewModel.inProgress.value == true) {
+                        return@setOnClickListener
+                    }
+
+                    conferenceViewModel.sendToConnect(numbers, video)
+                    dialog.dismiss()
+
+                    Toast.makeText(
+                        requireContext(),
+                        "Preparing conference…",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+        }
+
+        dialog.show()
+    }
+
     override fun onPause() {
         super.onPause()
 
@@ -227,6 +362,9 @@ class ContactFragment : SlidingPaneChildFragment() {
 
         bottomSheetDialog?.dismiss()
         bottomSheetDialog = null
+
+        conferencePicker?.dismiss()
+        conferencePicker = null
     }
 
     private fun copyNumberOrAddressToClipboard(value: String, isSip: Boolean) {

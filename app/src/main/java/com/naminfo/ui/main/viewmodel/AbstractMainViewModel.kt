@@ -307,6 +307,11 @@ open class AbstractMainViewModel
                 core.resetMissedCallsCount()
             }
             updateMissedCallsCount()
+            // The notification combines missed calls from all accounts.
+            // Keep it if another account still has unseen missed calls.
+            if (core.missedCallsCount == 0) {
+                coreContext.notificationsManager.dismissMissedCallNotification()
+            }
         }
     }
 

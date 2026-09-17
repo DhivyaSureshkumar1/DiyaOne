@@ -277,6 +277,7 @@
 
                     <LinearLayout
                         android:id="@+id/numbers_and_addresses"
+                        android:visibility="@{viewModel.conferenceDetails ? View.GONE : View.VISIBLE}"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
@@ -379,7 +380,7 @@
                         android:drawableTint="?attr/color_main2_600"
                         android:drawablePadding="8dp"
                         android:background="@drawable/squircle_transparent_button_background"
-                        android:visibility="@{viewModel.showContactTrustAndDevices ? View.VISIBLE : View.GONE, default=gone}"
+                        android:visibility="@{!viewModel.conferenceDetails &amp;&amp; viewModel.showContactTrustAndDevices ? View.VISIBLE : View.GONE, default=gone}"
                         app:layout_constraintStart_toStartOf="@id/devices_trust"
                         app:layout_constraintTop_toBottomOf="@id/contact_job_info"/>
 
@@ -393,7 +394,7 @@
                         android:drawableEnd="@{viewModel.expandDevicesTrust ? @drawable/caret_up : @drawable/caret_down, default=@drawable/caret_up}"
                         android:drawableTint="?attr/color_main2_600"
                         android:background="@drawable/squircle_transparent_button_background"
-                        android:visibility="@{viewModel.showContactTrustAndDevices ? View.VISIBLE : View.GONE, default=gone}"
+                        android:visibility="@{!viewModel.conferenceDetails &amp;&amp; viewModel.showContactTrustAndDevices ? View.VISIBLE : View.GONE, default=gone}"
                         app:layout_constraintStart_toEndOf="@id/trust_label"
                         app:layout_constraintEnd_toEndOf="@id/devices_trust"
                         app:layout_constraintBottom_toTopOf="@id/devices_trust"/>
@@ -405,7 +406,7 @@
                         android:layout_marginStart="16dp"
                         android:layout_marginEnd="16dp"
                         android:background="@drawable/shape_squircle_white_background"
-                        android:visibility="@{viewModel.expandDevicesTrust ? View.VISIBLE : View.INVISIBLE}"
+                        android:visibility="@{viewModel.conferenceDetails ? View.GONE : (viewModel.expandDevicesTrust ? View.VISIBLE : View.INVISIBLE)}"
                         app:layout_constraintWidth_max="@dimen/section_max_width"
                         app:layout_constraintTop_toBottomOf="@id/trust_label"
                         app:layout_constraintStart_toStartOf="parent"
@@ -519,6 +520,7 @@
                     <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/media_documents_actions"
                         style="@style/section_header_style"
+                        android:visibility="@{viewModel.conferenceDetails ? View.GONE : View.VISIBLE}"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
@@ -535,6 +537,7 @@
                     <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/action_media"
                         style="@style/context_menu_action_label_style"
+                        android:visibility="@{viewModel.conferenceDetails ? View.GONE : View.VISIBLE}"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
@@ -551,6 +554,7 @@
                     <androidx.appcompat.widget.AppCompatTextView
                         android:id="@+id/action_documents"
                         style="@style/context_menu_action_label_style"
+                        android:visibility="@{viewModel.conferenceDetails ? View.GONE : View.VISIBLE}"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
@@ -569,6 +573,7 @@
                         android:id="@+id/media_documents_separator"
                         android:layout_width="0dp"
                         android:layout_height="1dp"
+                        android:visibility="@{viewModel.conferenceDetails ? View.GONE : View.VISIBLE}"
                         android:layout_marginStart="16dp"
                         android:layout_marginEnd="16dp"
                         android:background="?attr/color_separator"
@@ -580,6 +585,7 @@
                     <androidx.appcompat.widget.AppCompatTextView
                         style="@style/section_header_style"
                         android:id="@+id/actions"
+                        android:visibility="@{viewModel.conferenceDetails ? View.GONE : View.VISIBLE}"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:padding="10dp"
@@ -601,7 +607,7 @@
                         android:layout_marginStart="16dp"
                         android:layout_marginEnd="16dp"
                         android:background="@drawable/action_background_top"
-                        android:visibility="@{viewModel.isStored &amp;&amp; !viewModel.isReadOnly ? View.VISIBLE : View.GONE}"
+                        android:visibility="@{!viewModel.conferenceDetails &amp;&amp; viewModel.isStored &amp;&amp; !viewModel.isReadOnly ? View.VISIBLE : View.GONE}"
                         android:text="@{viewModel.isFavourite ? @string/contact_details_remove_from_favourites : @string/contact_details_add_to_favourites, default=@string/contact_details_add_to_favourites}"
                         android:drawableStart="@{viewModel.isFavourite ? @drawable/heart_fill : @drawable/heart, default=@drawable/heart_fill}"
                         android:drawableTint="@{viewModel.isFavourite ? @color/danger_500 : @color/main2_500, default=@color/danger_500}"

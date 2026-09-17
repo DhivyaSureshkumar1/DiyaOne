@@ -465,10 +465,14 @@ class ConversationViewModel
     @UiThread
     fun markAsRead() {
         if (!isChatRoomInitialized()) return
+
         coreContext.postOnCoreThread {
-            if (chatRoom.unreadMessagesCount == 0) return@postOnCoreThread
-            Log.i("$TAG Marking chat room as read")
-            chatRoom.markAsRead()
+            if (chatRoom.unreadMessagesCount > 0) {
+                Log.i("$TAG Marking chat room as read")
+                chatRoom.markAsRead()
+            }
+
+            coreContext.notificationsManager.dismissChatNotification(chatRoom)
         }
     }
 

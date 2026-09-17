@@ -496,7 +496,7 @@
     <string name="contacts_change_filter_label">Change filter</string>
     <string name="contacts_list_favourites_title">Favourites</string>
     <string name="contacts_list_all_contacts_title">All contacts</string>
-    <string name="contacts_list_conference_title">Conference</string>
+    <string name="contacts_list_conference_title">Take Conference</string>
     <string name="contacts_list_filter_popup_see_all">See all</string>
     <string name="contacts_list_filter_popup_see_linphone_only">See &appName; contacts</string>
     <string name="contacts_list_filter_popup_see_sip_only">See SIP contacts</string>
