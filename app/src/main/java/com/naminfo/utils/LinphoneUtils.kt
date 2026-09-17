@@ -10,8 +10,6 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.IntegerRes
 import androidx.annotation.WorkerThread
 import androidx.core.text.toSpannable
-import java.text.SimpleDateFormat
-import java.util.Locale
 import com.naminfo.DiyaOneApplication.Companion.coreContext
 import com.naminfo.DiyaOneApplication.Companion.corePreferences
 import com.naminfo.R
@@ -698,10 +696,7 @@ class LinphoneUtils {
                     val label = AppUtils.getString(
                         R.string.message_voice_message_content_description
                     )
-                    val formattedDuration = SimpleDateFormat(
-                        "mm:ss",
-                        Locale.getDefault()
-                    ).format(firstContent.fileDuration) // duration is in ms
+                    val formattedDuration = VoiceDurationUtils.format(firstContent.fileDuration)
                     contentDescription = "$label ($formattedDuration)"
                 } else {
                     for (content in message.contents) {

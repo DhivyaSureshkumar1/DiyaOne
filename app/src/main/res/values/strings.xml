@@ -188,7 +188,7 @@
     <string name="assistant_account_register_unavailable_no_push_warning">Push notifications do not seem to be available on your device, but they are mandatory for creating an account in the mobile app.\n\nWe invite you to create an account on our web platform instead:</string>
     <string name="assistant_account_register_push_notification_not_received_error">Push notification with auth token not received in 5 seconds, please try again later</string>
     <string name="assistant_account_register_unexpected_error">Unexpected error occurred, please try again later</string>
-    <string name="assistant_account_login_forbidden_error">Wrong username or password</string>
+    <string name="assistant_account_login_forbidden_error">Invalid username</string>
     <string name="assistant_account_login_error">Failed to login: error code is %s</string>
     <string name="assistant_permissions_title">Grant permissions</string>
     <string name="assistant_permissions_grant_all_of_them">OK</string>

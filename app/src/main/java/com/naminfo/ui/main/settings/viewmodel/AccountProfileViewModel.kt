@@ -21,6 +21,20 @@ import com.naminfo.ui.main.model.AccountModel
 import com.naminfo.ui.main.model.isEndToEndEncryptionMandatory
 import com.naminfo.ui.main.settings.model.AccountDeviceModel
 import com.naminfo.utils.Event
+// Add these imports. No kotlin.coroutines imports are needed.
+
+import androidx.annotation.*
+import androidx.lifecycle.*
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeout
+import org.linphone.core.*
+import org.linphone.core.Core
+import org.linphone.core.CoreListenerStub
+import org.linphone.core.RegistrationState
 
 class AccountProfileViewModel
     @UiThread
@@ -68,6 +82,9 @@ class AccountProfileViewModel
     private lateinit var account: Account
 
     private lateinit var accountManagerServices: AccountManagerServices
+
+    val signOutInProgress = MutableLiveData(false)
+    val signOutError = MutableLiveData("")
 
     private val accountManagerServicesListener = object : AccountManagerServicesRequestListenerStub() {
         @WorkerThread
@@ -205,7 +222,7 @@ class AccountProfileViewModel
         }
     }
 
-    @UiThread
+    /*@UiThread
     fun deleteAccount() {
         coreContext.postOnCoreThread { core ->
             if (::account.isInitialized) {
@@ -231,7 +248,210 @@ class AccountProfileViewModel
                 }
             }
         }
+    }*/
+
+    @UiThread
+    fun deleteAccount() {
+        if (signOutInProgress.value == true) return
+
+        signOutInProgress.value = true
+        signOutError.value = ""
+
+        viewModelScope.launch {
+            try {
+                withTimeout(30_000L) {
+                    unregisterAndRemoveAccount()
+                }
+
+                // Navigate away only after unregistration and cleanup succeed.
+                accountRemovedEvent.value = Event(true)
+            } catch (timeout: TimeoutCancellationException) {
+                signOutError.value =
+                    "Server did not confirm sign-out. Check your connection and retry."
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                signOutError.value =
+                    "Sign-out failed. Check your connection and retry."
+                Log.e("$TAG Sign-out failed: $error")
+            } finally {
+                signOutInProgress.value = false
+            }
+        }
     }
+
+    private suspend fun unregisterAndRemoveAccount(): Unit =
+        suspendCancellableCoroutine<Unit> { continuation ->
+            coreContext.postOnCoreThread { core ->
+                if (!continuation.isActive) return@postOnCoreThread
+
+                if (!::account.isInitialized) {
+                    continuation.resumeWith(
+                        Result.failure(
+                            IllegalStateException("Account is not loaded")
+                        )
+                    )
+                    return@postOnCoreThread
+                }
+
+                val target = account
+                val authInfo = target.findAuthInfo()
+                var completed = false
+
+                val listener = object : CoreListenerStub() {
+                    override fun onAccountRegistrationStateChanged(
+                        core: Core,
+                        changedAccount: Account,
+                        state: RegistrationState?,
+                        message: String
+                    ) {
+                        if (changedAccount != target) return
+                        if (completed || !continuation.isActive) return
+
+                        when (state) {
+                            RegistrationState.Cleared -> {
+                                completed = true
+                                core.removeListener(this)
+
+                                try {
+                                    val identity = target.params.identityAddress
+                                        ?.asStringUriOnly()
+
+                                    val profileSection = "saved_profile_$identity"
+
+                                    core.config.setString(
+                                        profileSection,
+                                        "display_name",
+                                        target.params.identityAddress?.displayName
+                                    )
+
+                                    core.config.setString(
+                                        profileSection,
+                                        "picture_uri",
+                                        target.params.pictureUri
+                                    )
+
+                                    // Keep conversations and call history.
+                                    // Do not use removeAccountWithData().
+                                    core.removeAccount(target)
+
+                                    // Remove credentials only after unregistration.
+                                    // Preserve credentials shared by another account.
+                                    if (
+                                        authInfo != null &&
+                                        core.accountList.none {
+                                            it.findAuthInfo() == authInfo
+                                        }
+                                    ) {
+                                        core.removeAuthInfo(authInfo)
+                                    }
+
+                                    if (core.accountList.isEmpty()) {
+                                        core.provisioningUri = null
+                                    }
+
+                                    core.config.sync()
+
+                                    if (continuation.isActive) {
+                                        continuation.resumeWith(
+                                            Result.success(Unit)
+                                        )
+                                    }
+                                } catch (error: Exception) {
+                                    if (continuation.isActive) {
+                                        continuation.resumeWith(
+                                            Result.failure(error)
+                                        )
+                                    }
+                                }
+                            }
+
+                            RegistrationState.Failed -> {
+                                completed = true
+                                core.removeListener(this)
+
+                                if (continuation.isActive) {
+                                    continuation.resumeWith(
+                                        Result.failure(
+                                            IllegalStateException(
+                                                "Unregistration failed: $message"
+                                            )
+                                        )
+                                    )
+                                }
+                            }
+
+                            else -> Unit
+                        }
+                    }
+                }
+
+                // A timeout/cancellation must remove the temporary listener.
+                continuation.invokeOnCancellation {
+                    coreContext.postOnCoreThread { currentCore ->
+                        currentCore.removeListener(listener)
+                    }
+                }
+
+                core.addListener(listener)
+
+                if (!continuation.isActive) {
+                    core.removeListener(listener)
+                    return@postOnCoreThread
+                }
+
+                try {
+                    when {
+                        target.state == RegistrationState.Cleared -> {
+                            // Unregistration already completed, possibly after
+                            // an earlier UI timeout. Finish local cleanup.
+                            listener.onAccountRegistrationStateChanged(
+                                core,
+                                target,
+                                RegistrationState.Cleared,
+                                "Already unregistered"
+                            )
+                        }
+
+                        !core.isNetworkReachable -> {
+                            core.removeListener(listener)
+
+                            if (continuation.isActive) {
+                                continuation.resumeWith(
+                                    Result.failure(
+                                        IllegalStateException("Network unavailable")
+                                    )
+                                )
+                            }
+                        }
+
+                        else -> {
+                            // Authentication and account remain available while
+                            // the SDK sends the unregister request.
+                            val params = target.params.clone()
+                            params.isRegisterEnabled = false
+                            params.isPublishEnabled = false
+                            target.params = params
+
+                            core.config.sync()
+
+                            Log.i(
+                                "$TAG Waiting for unregistration confirmation"
+                            )
+                        }
+                    }
+                } catch (error: Exception) {
+                    core.removeListener(listener)
+
+                    if (!completed && continuation.isActive) {
+                        completed = true
+                        continuation.resumeWith(
+                            Result.failure(error)
+                        )
+                    }
+                }
+            }
+        }
 
     @UiThread
     fun setNewPicturePath(path: String) {

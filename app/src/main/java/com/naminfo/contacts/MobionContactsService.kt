@@ -97,7 +97,7 @@ object MobionContactsService {
                     name = parser.nextText().trim()
                 }
                 event == XmlPullParser.START_TAG && parser.name == "Mobile_No" -> {
-                    mobileNumber = parser.nextText().filter(Char::isDigit)
+                    mobileNumber = PhoneContactNumbers.normalize(parser.nextText())
                 }
                 event == XmlPullParser.END_TAG && parser.name == "Table" -> {
                     if (name.isNotBlank() && mobileNumber.length == 10) {

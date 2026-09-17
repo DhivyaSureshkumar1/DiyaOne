@@ -126,10 +126,12 @@ class AccountProfileFragment : GenericMainFragment() {
                 }
             }
 
-            model.confirmEvent.observe(viewLifecycleOwner) {
-                it.consume {
-                    viewModel.deleteAccount()
-                    dialog.dismiss()
+            model.confirmEvent.observe(viewLifecycleOwner) { event ->
+                event.consume {
+                    if (viewModel.signOutInProgress.value != true) {
+                        viewModel.deleteAccount()
+                        dialog.dismiss()
+                    }
                 }
             }
 
@@ -156,6 +158,15 @@ class AccountProfileFragment : GenericMainFragment() {
                     (requireActivity() as GenericActivity).showRedToast(message, icon)
                     goBack()
                 }
+            }
+        }
+
+        viewModel.signOutError.observe(viewLifecycleOwner) { message ->
+            if (message.isNotBlank()) {
+                (requireActivity() as GenericActivity).showRedToast(
+                    message,
+                    R.drawable.warning_circle
+                )
             }
         }
     }

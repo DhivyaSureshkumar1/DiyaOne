@@ -13,8 +13,6 @@ import androidx.annotation.WorkerThread
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.media.AudioFocusRequestCompat
-import java.text.SimpleDateFormat
-import java.util.Locale
 import java.util.regex.Pattern
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +45,7 @@ import com.naminfo.utils.LinphoneUtils
 import com.naminfo.utils.PatternClickableSpan
 import com.naminfo.utils.SpannableClickedListener
 import com.naminfo.utils.TimestampUtils
+import com.naminfo.utils.VoiceDurationUtils
 
 class MessageModel
     @WorkerThread
@@ -852,8 +851,7 @@ class MessageModel
         if (voiceRecordPlayer.open(path) == 0) {
             val duration = voiceRecordPlayer.duration
             voiceRecordingDuration.postValue(duration)
-            val formattedDuration =
-                SimpleDateFormat("mm:ss", Locale.getDefault()).format(duration) // duration is in ms
+            val formattedDuration = VoiceDurationUtils.format(duration)
             formattedVoiceRecordingDuration.postValue(formattedDuration)
         } else {
             Log.e("$TAG Player failed to open file at [$path]")
@@ -1024,10 +1022,7 @@ class MessageModel
         val duration = content.fileDuration
         voiceRecordingDuration.postValue(duration)
 
-        val formattedDuration = SimpleDateFormat(
-            "mm:ss",
-            Locale.getDefault()
-        ).format(duration) // duration is in ms
+        val formattedDuration = VoiceDurationUtils.format(duration)
         formattedVoiceRecordingDuration.postValue(formattedDuration)
         Log.i(
             "$TAG Found voice record with path [$voiceRecordPath] and duration [$formattedDuration]"
