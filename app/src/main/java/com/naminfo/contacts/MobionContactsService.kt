@@ -100,7 +100,7 @@ object MobionContactsService {
                     mobileNumber = PhoneContactNumbers.normalize(parser.nextText())
                 }
                 event == XmlPullParser.END_TAG && parser.name == "Table" -> {
-                    if (name.isNotBlank() && mobileNumber.length == 10) {
+                    if (mobileNumber.length == 10) {
                         contacts[mobileNumber] = Contact(name, mobileNumber)
                     }
                 }

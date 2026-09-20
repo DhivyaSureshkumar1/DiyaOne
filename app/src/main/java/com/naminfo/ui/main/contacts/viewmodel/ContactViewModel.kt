@@ -58,6 +58,8 @@ class ContactViewModel
 
     val title = MutableLiveData<String>()
 
+    val primaryPhoneNumber = MutableLiveData<String>()
+
     val isFavourite = MutableLiveData<Boolean>()
 
     val showBackButton = MutableLiveData<Boolean>()
@@ -339,7 +341,11 @@ class ContactViewModel
         isStored.postValue(
             !coreContext.contactsManager.isContactTemporary(friend)
         )
-        isReadOnly.postValue(isConference || friend.isReadOnly)
+        isReadOnly.postValue(
+            isTakeConferenceContact() ||
+                    isApiMatchedContact() ||
+                    friend.isReadOnly
+        )
         isNative.postValue(!friend.nativeUri.isNullOrEmpty())
 
         contact.value?.destroy()
@@ -352,6 +358,14 @@ class ContactViewModel
         // Hide the number section through conferenceDetails in the layout.
         val callableNumbers =
             friend.getListOfSipAddressesAndPhoneNumbers(listener)
+
+        primaryPhoneNumber.postValue(
+            if (isConference) {
+                ""
+            } else {
+                callableNumbers.firstOrNull()?.displayNumber.orEmpty()
+            }
+        )
 
         sipAddressesAndPhoneNumbers.postValue(
             ArrayList(callableNumbers.take(1))
@@ -444,6 +458,7 @@ class ContactViewModel
                 coreContext.contactsManager.notifyContactsListChanged()
                 contactRemovedEvent.postValue(Event(true))
             }
+            if (isApiMatchedContact()) return@postOnCoreThread
         }
     }
 
@@ -494,9 +509,15 @@ class ContactViewModel
 
     @WorkerThread
     private fun getPreferredCallAddress(): Address? {
+        if (isApiMatchedContact()) {
+            // Use the SIP address created for the signed-in account domain.
+            return friend.addresses.firstOrNull()
+        }
+
         val address = getSingleAvailableAddress()
             ?: LinphoneUtils.getFirstAvailableAddressForFriend(friend)
             ?: return null
+
         return normalizeIndiaDestination(address)
     }
 
@@ -745,5 +766,10 @@ class ContactViewModel
     private fun isTakeConferenceContact(): Boolean {
         return ::friend.isInitialized &&
                 friend.refKey.orEmpty().startsWith("conference:permanent:")
+    }
+
+    private fun isApiMatchedContact(): Boolean {
+        return ::friend.isInitialized &&
+                friend.refKey.orEmpty().startsWith("mobion:")
     }
 }

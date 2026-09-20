@@ -138,7 +138,7 @@ class HistoryViewModel
                 val model = CallLogModel(callLog)
                 callLogModel.postValue(model)
 
-                val conference = callLog.wasConference()
+                val conference = model.wasConference
                 isConferenceCallLog.postValue(conference)
                 meetingChatRoom = callLog.chatRoom
                 isChatRoomAvailable.postValue(meetingChatRoom != null)

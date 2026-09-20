@@ -109,23 +109,7 @@ class StartCallViewModel
                 removedCharacterAtCurrentPositionEvent.value = Event(true)
             },
             { // OnCallClicked
-                val suggestion = searchFilter.value.orEmpty()
-                if (suggestion.isNotEmpty()) {
-                    Log.i("$TAG Using numpad dial button to call [$suggestion]")
-                    coreContext.postOnCoreThread { core ->
-                        val address = core.interpretUrl(
-                            suggestion,
-                            LinphoneUtils.applyInternationalPrefix()
-                        )
-                        if (address != null) {
-                            Log.i("$TAG Calling [${address.asStringUriOnly()}]")
-                            coreContext.startAudioCall(address)
-                            leaveFragmentEvent.postValue(Event(true))
-                        } else {
-                            Log.e("$TAG Failed to parse [$suggestion] as SIP address")
-                        }
-                    }
-                }
+                startNumpadCall(video = false)
             },
             { // OnBlindTransferClicked
                 val suggestion = searchFilter.value.orEmpty()
@@ -147,6 +131,9 @@ class StartCallViewModel
             },
             { // OnClearInput
                 clearSearchBarEvent.value = Event(true)
+            },
+            { // OnVideoCallClicked
+                startNumpadCall(video = true)
             }
         )
 
@@ -162,6 +149,31 @@ class StartCallViewModel
     override fun onSingleAddressSelected(address: Address, friend: Friend?) {
         coreContext.startAudioCall(address)
         leaveFragmentEvent.postValue(Event(true))
+    }
+
+    @UiThread
+    private fun startNumpadCall(video: Boolean) {
+        val suggestion = searchFilter.value.orEmpty()
+        if (suggestion.isEmpty()) return
+
+        Log.i("$TAG Using numpad to start ${if (video) "video" else "audio"} call [$suggestion]")
+        coreContext.postOnCoreThread { core ->
+            val address = core.interpretUrl(
+                suggestion,
+                LinphoneUtils.applyInternationalPrefix()
+            )
+            if (address != null) {
+                Log.i("$TAG Calling [${address.asStringUriOnly()}]")
+                if (video) {
+                    coreContext.startVideoCall(address)
+                } else {
+                    coreContext.startAudioCall(address)
+                }
+                leaveFragmentEvent.postValue(Event(true))
+            } else {
+                Log.e("$TAG Failed to parse [$suggestion] as SIP address")
+            }
+        }
     }
 
     @UiThread

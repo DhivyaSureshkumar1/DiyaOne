@@ -29,9 +29,13 @@ class CallLogModel
 
     val displayedAddress: String
 
+    val displayedName: String
+
     val avatarModel: ContactAvatarModel
 
     val wasConference: Boolean
+
+    val isVideoCall: Boolean
 
     @IntegerRes
     val iconResId: Int
@@ -53,10 +57,20 @@ class CallLogModel
         val time = TimestampUtils.timeToString(timestamp)
         dateTime = "$date | $time"
 
-        wasConference = callLog.wasConference()
+        val remoteUsername = address.username.orEmpty()
+        val isCustomAudioConference = remoteUsername.endsWith("_tcaudio", ignoreCase = true)
+        val isCustomVideoConference = remoteUsername.endsWith("_tcvideo", ignoreCase = true)
+        val isCustomConference = isCustomAudioConference || isCustomVideoConference
+
+        wasConference = callLog.wasConference() || isCustomConference
+        isVideoCall = if (isCustomConference) {
+            isCustomVideoConference
+        } else {
+            callLog.isVideoEnabled
+        }
         if (wasConference) {
             val conferenceInfo = callLog.conferenceInfo
-            if (conferenceInfo != null) {
+            if (conferenceInfo != null && !isCustomConference) {
                 avatarModel = coreContext.contactsManager.getContactAvatarModelForConferenceInfo(
                     conferenceInfo
                 )
@@ -64,7 +78,13 @@ class CallLogModel
                 Log.w("$TAG Failed to retrieve conference info attached to call log!")
                 val fakeFriend = coreContext.core.createFriend()
                 fakeFriend.address = address
-                fakeFriend.name = LinphoneUtils.getDisplayName(address)
+                fakeFriend.name = AppUtils.getString(
+                    if (isVideoCall) {
+                        R.string.history_call_type_video_conference
+                    } else {
+                        R.string.history_call_type_audio_conference
+                    }
+                )
                 avatarModel = ContactAvatarModel(fakeFriend)
                 avatarModel.forceConferenceIcon.postValue(true)
             }
@@ -78,6 +98,27 @@ class CallLogModel
             friendExists = coreContext.contactsManager.isContactAvailable(friend)
         }
         displayedAddress = address.username.orEmpty()
+
+        displayedName = if (isCustomConference) {
+            AppUtils.getString(
+                if (isVideoCall) {
+                    R.string.history_call_type_video_conference
+                } else {
+                    R.string.history_call_type_audio_conference
+                }
+            )
+        } else if (wasConference) {
+            callLog.conferenceInfo?.subject.orEmpty()
+        } else {
+            coreContext.contactsManager.findContactByAddress(address)
+                ?.name
+                .orEmpty()
+                .trim()
+                .takeUnless {
+                    it == displayedAddress || it == sipUri
+                }
+                .orEmpty()
+        }
 
         iconResId = LinphoneUtils.getCallIconResId(callLog.status, callLog.dir)
     }

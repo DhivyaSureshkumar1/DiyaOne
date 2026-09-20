@@ -80,6 +80,18 @@
             app:layout_constraintTop_toBottomOf="@id/call_log_display_name"
             app:layout_constraintBottom_toTopOf="@id/separator"/>
 
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/call_media_type"
+            style="@style/default_text_style_300"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="@{model.wasConference ? (model.videoCall ? @string/history_call_type_video_conference : @string/history_call_type_audio_conference) : (model.videoCall ? @string/history_call_type_video : @string/history_call_type_audio), default=@string/history_call_type_audio}"
+            android:textSize="12sp"
+            app:layout_constraintStart_toEndOf="@id/date_time"
+            app:layout_constraintTop_toTopOf="@id/date_time"
+            app:layout_constraintBottom_toBottomOf="@id/date_time" />
+
         <ImageView
             android:onClick="@{onCallClickListener}"
             android:id="@+id/call"

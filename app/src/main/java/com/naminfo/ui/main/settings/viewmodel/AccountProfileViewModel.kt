@@ -202,13 +202,17 @@ class AccountProfileViewModel
                     val domain = identityAddress.domain
                     val defaultDomain = corePreferences.defaultDomain
                     isOnDefaultDomain.postValue(domain == defaultDomain)
-                    if (domain == defaultDomain) {
+                    /*if (domain == defaultDomain) {
                         requestDevicesList(identityAddress)
                     } else {
                         Log.i(
                             "$TAG Account with domain [$domain] can't get devices list, only works with [$defaultDomain] domain"
                         )
-                    }
+                    }*/
+                    // This app does not use the Account Manager device-list API.
+                    devices.postValue(arrayListOf())
+                    devicesFetchInProgress.postValue(false)
+                    expandDevices.postValue(false)
                 } else {
                     Log.e("$TAG No identity address found!")
                 }

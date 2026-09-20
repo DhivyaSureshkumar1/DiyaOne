@@ -323,11 +323,11 @@ class ContactFragment : SlidingPaneChildFragment() {
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)
                 .setOnClickListener {
-                    val numbers = participants.filterIndexed { index, _ ->
+                    val selectedParticipants = participants.filterIndexed { index, _ ->
                         selected[index]
-                    }.map { it.number }
+                    }
 
-                    if (numbers.isEmpty()) {
+                    if (selectedParticipants.isEmpty()) {
                         Toast.makeText(
                             requireContext(),
                             "Select at least one contact",
@@ -340,7 +340,10 @@ class ContactFragment : SlidingPaneChildFragment() {
                         return@setOnClickListener
                     }
 
-                    conferenceViewModel.sendToConnect(numbers, video)
+                    conferenceViewModel.sendToConnect(
+                        selectedNumbers = selectedParticipants.map { it.number },
+                        video = video
+                    )
                     dialog.dismiss()
 
                     Toast.makeText(

@@ -323,6 +323,12 @@ abstract class AbstractMainFragment : GenericMainFragment() {
     override fun onResume() {
         super.onResume()
 
+        // Each bottom navigation fragment owns a separate view model. Refresh the
+        // counter so a fragment can't restore a stale badge after History cleared it.
+        coreContext.postOnCoreThread {
+            viewModel.updateMissedCallsCount()
+        }
+
         if (currentFragmentId > 0) {
             sharedViewModel.currentlyDisplayedFragment.value = currentFragmentId
         }

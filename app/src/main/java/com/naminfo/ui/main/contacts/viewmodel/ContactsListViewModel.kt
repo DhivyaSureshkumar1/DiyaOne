@@ -165,8 +165,8 @@ class ContactsListViewModel
             applyFilter(currentFilter, domainFilter)
         }
 
-        refreshMobionContacts()
-        refreshConferenceContacts()
+        // refreshMobionContacts()
+        // refreshConferenceContacts()
     }
 
     @UiThread
@@ -191,8 +191,8 @@ class ContactsListViewModel
 
     @UiThread
     fun applyCurrentDefaultAccountFilter() {
-        refreshMobionContacts()
-        refreshConferenceContacts()
+        // refreshMobionContacts()
+        // refreshConferenceContacts()
         coreContext.postOnCoreThread {
             ensurePermanentConferenceContacts()
             domainFilter = ""
@@ -542,6 +542,9 @@ class ContactsListViewModel
 
         for (result in results) {
             val friend = result.friend ?: continue
+            if (!friend.refKey.orEmpty().startsWith("conference:permanent:")) {
+                continue
+            }
             if (friend != null) {
                 val refKey = friend.refKey.orEmpty()
                 val isMobionContact = refKey.startsWith("mobion:")
@@ -612,7 +615,7 @@ class ContactsListViewModel
         if (favourites) {
             favouritesList.postValue(list)
         } else {
-            contactsList.postValue(list)
+            // contactsList.postValue(list)
             conferenceList.postValue(conferences)
             firstLoad = false
         }

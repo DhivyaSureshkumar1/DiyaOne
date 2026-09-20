@@ -36,7 +36,7 @@
             android:layout_marginTop="10dp"
             android:layout_marginStart="8dp"
             android:layout_marginBottom="5dp"
-            android:text="@{model.isOutgoing() ? @string/call_outgoing : @string/call_audio_incoming, default=@string/call_outgoing}"
+            android:text="@{model.wasConference ? (model.videoCall ? @string/history_call_type_video_conference : @string/history_call_type_audio_conference) : (model.videoCall ? (model.isOutgoing() ? @string/history_video_call_outgoing : @string/call_video_incoming) : (model.isOutgoing() ? @string/history_audio_call_outgoing : @string/call_audio_incoming)), default=@string/history_audio_call_outgoing}"
             android:textSize="14sp"
             android:textColor="?attr/color_main2_700"
             app:layout_constraintStart_toEndOf="@id/call_status"

@@ -20,7 +20,8 @@ open class NumpadModel
     private val onBackspaceClicked: () -> (Unit),
     private val onCallClicked: () -> (Unit),
     private val onTransferCallClicked: () -> (Unit),
-    private val onClearClicked: () -> (Unit)
+    private val onClearClicked: () -> (Unit),
+    private val onVideoCallClicked: (() -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "[Numpad Model]"
@@ -116,6 +117,12 @@ open class NumpadModel
     fun onCallClicked() {
         Log.i("$TAG Starting call")
         onCallClicked.invoke()
+    }
+
+    @UiThread
+    fun onVideoCallClicked() {
+        Log.i("$TAG Starting video call")
+        onVideoCallClicked?.invoke()
     }
 
     @UiThread

@@ -170,7 +170,14 @@ class HistoryListViewModel
         for (callLog in logs) {
             val model = CallLogModel(callLog)
             val alreadyDisplayed = list.any { wrapper ->
-                wrapper.callLogModel?.address?.weakEqual(model.address) == true
+                wrapper.callLogModel?.let { displayedModel ->
+                    displayedModel.address.weakEqual(model.address) &&
+                        displayedModel.wasConference == model.wasConference &&
+                        (
+                            !model.wasConference ||
+                            displayedModel.isVideoCall == model.isVideoCall
+                        )
+                } == true
             }
             if (!alreadyDisplayed && isCallLogMatchingFilter(model, filter)) {
                 list.add(CallLogModelWrapper(model))

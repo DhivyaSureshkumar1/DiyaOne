@@ -20,6 +20,10 @@ class CallLogHistoryModel
 
     val isSuccessful = MutableLiveData<Boolean>()
 
+    val wasConference: Boolean
+
+    val isVideoCall: Boolean
+
     val dateTime = MutableLiveData<String>()
 
     val duration = MutableLiveData<String>()
@@ -28,6 +32,18 @@ class CallLogHistoryModel
     val iconResId = MutableLiveData<Int>()
 
     init {
+        val remoteUsername = callLog.remoteAddress.username.orEmpty()
+        val isCustomAudioConference = remoteUsername.endsWith("_tcaudio", ignoreCase = true)
+        val isCustomVideoConference = remoteUsername.endsWith("_tcvideo", ignoreCase = true)
+        val isCustomConference = isCustomAudioConference || isCustomVideoConference
+
+        wasConference = callLog.wasConference() || isCustomConference
+        isVideoCall = if (isCustomConference) {
+            isCustomVideoConference
+        } else {
+            callLog.isVideoEnabled
+        }
+
         isOutgoing.postValue(callLog.dir == Dir.Outgoing)
 
         val startDate = callLog.startDate

@@ -26,6 +26,8 @@ class ConversationContactOrSuggestionModel
 
     val starred = friend?.starred == true
 
+    val displayNumber = address.username.orEmpty()
+
     val name = conversationSubject
         ?: if (friend != null) {
             friend.name ?: LinphoneUtils.getDisplayName(address)

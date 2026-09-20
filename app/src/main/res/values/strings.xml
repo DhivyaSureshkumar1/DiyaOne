@@ -1093,4 +1093,11 @@
     <string name="managed_root_ca_description" translatable="false">PEM-encoded root certificate(s) used to validate TLS connections.</string>
     <string name="active_call_unknown_caller">Unknown caller</string>
     <string name="assistant_login_country_code_optional">Country code (optional)</string>
+    <string name="contacts_list_title">Contacts</string>
+    <string name="history_call_type_audio">Audio</string>
+    <string name="history_call_type_video">Video</string>
+    <string name="history_call_type_audio_conference">Audio conference</string>
+    <string name="history_call_type_video_conference">Video conference</string>
+    <string name="history_audio_call_outgoing">Outgoing audio call</string>
+    <string name="history_video_call_outgoing">Outgoing video call</string>
 </resources>

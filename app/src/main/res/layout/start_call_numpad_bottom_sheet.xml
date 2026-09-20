@@ -32,7 +32,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:barrierDirection="top"
-            app:constraint_referenced_ids="call, transfer" />
+            app:constraint_referenced_ids="call, video_call, transfer" />
 
         <com.google.android.material.bottomsheet.BottomSheetDragHandleView
             android:id="@+id/handle"
@@ -206,10 +206,30 @@
             android:background="@drawable/squircle_green_button_background"
             android:visibility="@{showCallTransferIcon ? View.GONE : View.VISIBLE}"
             app:tint="@color/bc_white"
+            app:layout_constraintStart_toStartOf="@id/digit_star"
+            app:layout_constraintEnd_toEndOf="@id/digit_star"
+            app:layout_constraintTop_toBottomOf="@id/digit_0"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+        <ImageView
+            android:id="@+id/video_call"
+            android:onClick="@{() -> model.onVideoCallClicked()}"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/call_button_size"
+            android:paddingStart="30dp"
+            android:paddingTop="15dp"
+            android:paddingEnd="30dp"
+            android:paddingBottom="15dp"
+            android:src="@drawable/video_camera"
+            android:contentDescription="@string/content_description_call_start_video"
+            android:elevation="3dp"
+            android:background="@drawable/squircle_green_button_background"
+            android:visibility="@{showCallTransferIcon ? View.GONE : View.VISIBLE}"
+            app:tint="@color/bc_white"
             app:layout_constraintStart_toStartOf="@id/digit_0"
             app:layout_constraintEnd_toEndOf="@id/digit_0"
             app:layout_constraintTop_toBottomOf="@id/digit_0"
-            app:layout_constraintBottom_toBottomOf="parent"/>
+            app:layout_constraintBottom_toBottomOf="parent" />
 
         <ImageView
             android:id="@+id/transfer"

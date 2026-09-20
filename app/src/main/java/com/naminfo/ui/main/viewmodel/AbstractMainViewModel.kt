@@ -247,6 +247,7 @@ open class AbstractMainViewModel
 
     @UiThread
     fun navigateToHistory() {
+        resetMissedCallsCount()
         navigateToHistoryEvent.value = Event(true)
     }
 
@@ -297,6 +298,8 @@ open class AbstractMainViewModel
 
     @UiThread
     fun resetMissedCallsCount() {
+        // Update the badge immediately while the Core counter is reset on its thread.
+        missedCallsCount.value = 0
         coreContext.postOnCoreThread { core ->
             val account = LinphoneUtils.getDefaultAccount()
             // Fetch all call logs if only one account to workaround no history issue
