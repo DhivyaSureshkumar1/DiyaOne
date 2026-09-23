@@ -221,7 +221,16 @@ class CoreContext
             chatRoom: ChatRoom,
             messages: Array<out ChatMessage?>
         ) {
-            if (corePreferences.makePublicMediaFilesDownloaded && core.maxSizeForAutoDownloadIncomingFiles >= 0) {
+            for (message in messages) {
+                if (message != null) {
+                    CustomImdn.receive(chatRoom, message)
+                }
+            }
+
+            if (
+                corePreferences.makePublicMediaFilesDownloaded &&
+                core.maxSizeForAutoDownloadIncomingFiles >= 0
+            ) {
                 for (message in messages) {
                     // Never do auto media export for ephemeral messages!
                     if (message?.isEphemeral == true) continue
@@ -233,9 +242,15 @@ class CoreContext
 
                             val mime = "${content.type}/${content.subtype}"
                             val mimeType = FileUtils.getMimeType(mime)
+
                             when (mimeType) {
-                                FileUtils.MimeType.Image, FileUtils.MimeType.Video, FileUtils.MimeType.Audio -> {
-                                    Log.i("$TAG Added file path [$path] to the list of media to export to native media gallery")
+                                FileUtils.MimeType.Image,
+                                FileUtils.MimeType.Video,
+                                FileUtils.MimeType.Audio -> {
+                                    Log.i(
+                                        "$TAG Added file path [$path] " +
+                                                "to the list of media to export to native media gallery"
+                                    )
                                     filesToExportToNativeMediaGallery.add(path)
                                 }
                                 else -> {}
@@ -246,9 +261,19 @@ class CoreContext
             }
 
             if (filesToExportToNativeMediaGallery.isNotEmpty()) {
-                Log.i("$TAG Creating event with [${filesToExportToNativeMediaGallery.size}] files to export to native media gallery")
-                filesToExportToNativeMediaGalleryEvent.postValue(Event(filesToExportToNativeMediaGallery))
+                Log.i(
+                    "$TAG Creating event with " +
+                            "[${filesToExportToNativeMediaGallery.size}] files to export"
+                )
+                filesToExportToNativeMediaGalleryEvent.postValue(
+                    Event(filesToExportToNativeMediaGallery)
+                )
             }
+        }
+
+        @WorkerThread
+        override fun onChatRoomRead(core: Core, chatRoom: ChatRoom) {
+            CustomImdn.roomRead(chatRoom)
         }
 
         @WorkerThread
@@ -544,12 +569,8 @@ class CoreContext
                         "$TAG Newly added account (or the whole Core) doesn't support push notifications, enabling keep-alive foreground service..."
                     )
                     corePreferences.keepServiceAlive = true
-                    startKeepAliveService()
-                } else {
-                    Log.i(
-                        "$TAG Newly added account (or the whole Core) doesn't support push notifications but keep-alive foreground service is already enabled, nothing to do"
-                    )
                 }
+                startKeepAliveService()
             }
         }
 
@@ -662,6 +683,21 @@ class CoreContext
         coreThread = Handler(looper)
 
         core = Factory.instance().createCoreWithConfig(corePreferences.config, context)
+        // Disable automatic outgoing delivery/read/error receipts.
+        val imdnPolicy = checkNotNull(core.imNotifPolicy) {
+            "Linphone IM notification policy is unavailable"
+        }
+
+        imdnPolicy.setSendImdnDelivered(false)
+        imdnPolicy.setSendImdnDisplayed(false)
+        imdnPolicy.setSendImdnDeliveryError(false)
+
+        Log.i(
+            "$TAG [IMDN] Automatic outgoing receipts: " +
+                    "delivered=${imdnPolicy.getSendImdnDelivered()}, " +
+                    "displayed=${imdnPolicy.getSendImdnDisplayed()}, " +
+                    "error=${imdnPolicy.getSendImdnDeliveryError()}"
+        )
         core.isAutoIterateEnabled = true
         core.addListener(coreListener)
 
@@ -1215,6 +1251,7 @@ class CoreContext
     fun startKeepAliveService() {
         if (keepAliveServiceStarted) {
             Log.w("$TAG Keep alive service already started, skipping")
+            return
         }
 
         val serviceIntent = Intent(Intent.ACTION_MAIN).setClass(
@@ -1223,11 +1260,16 @@ class CoreContext
         )
         Log.i("$TAG Starting Keep alive for third party accounts Service")
         try {
-            context.startService(serviceIntent)
+            context.startForegroundService(serviceIntent)
             keepAliveServiceStarted = true
         } catch (e: Exception) {
             Log.e("$TAG Failed to start keep alive service: $e")
         }
+    }
+
+    @WorkerThread
+    fun onKeepAliveServiceDestroyed() {
+        keepAliveServiceStarted = false
     }
 
     @WorkerThread

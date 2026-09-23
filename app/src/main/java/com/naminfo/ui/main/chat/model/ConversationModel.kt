@@ -8,6 +8,7 @@ import androidx.core.text.toSpannable
 import androidx.lifecycle.MutableLiveData
 import com.naminfo.DiyaOneApplication.Companion.coreContext
 import com.naminfo.R
+import com.naminfo.core.CustomImdn
 import org.linphone.core.Address
 import org.linphone.core.ChatMessage
 import org.linphone.core.ChatMessageListenerStub
@@ -77,6 +78,16 @@ class ConversationModel
     val isBeingDeleted = MutableLiveData<Boolean>()
 
     private var lastMessage: ChatMessage? = null
+
+    private var customReceiptState: Pair<String, ChatMessage.State>? = null
+
+    private val customReceiptObserver: (String, ChatMessage.State) -> Unit = { messageKey, state ->
+        val message = lastMessage
+        if (message != null && message.isOutgoing && CustomImdn.key(message) == messageKey) {
+            customReceiptState = messageKey to state
+            lastMessageDeliveryIcon.postValue(LinphoneUtils.getChatIconResId(state))
+        }
+    }
 
     private val chatRoomListener = object : ChatRoomListenerStub() {
         @WorkerThread
@@ -181,6 +192,7 @@ class ConversationModel
 
     init {
         chatRoom.addListener(chatRoomListener)
+        CustomImdn.addObserver(customReceiptObserver)
 
         computeComposingLabel()
         subject.postValue(chatRoom.subjectUtf8)
@@ -202,6 +214,8 @@ class ConversationModel
 
     @WorkerThread
     fun destroy() {
+        CustomImdn.removeObserver(customReceiptObserver)
+        customReceiptState = null
         lastMessage?.removeListener(chatMessageListener)
         lastMessage = null
 
@@ -306,7 +320,11 @@ class ConversationModel
 
         isLastMessageOutgoing.postValue(isOutgoing)
         if (isOutgoing) {
-            lastMessageDeliveryIcon.postValue(LinphoneUtils.getChatIconResId(message.state))
+            val receiptState = customReceiptState?.takeIf {
+                it.first == CustomImdn.key(message)
+            }?.second
+            val state = receiptState ?: CustomImdn.effectiveState(message)
+            lastMessageDeliveryIcon.postValue(LinphoneUtils.getChatIconResId(state))
         }
 
         if (message.isRetracted) {
@@ -328,7 +346,17 @@ class ConversationModel
         lastMessage?.removeListener(chatMessageListener)
         lastMessage = null
 
-        val message = chatRoom.lastMessageInHistory
+        val latestMessage = chatRoom.lastMessageInHistory
+        val message = if (CustomImdn.isReceipt(latestMessage)) {
+            chatRoom.getHistoryMessageEvents(0).asSequence()
+                .mapNotNull { it.chatMessage }
+                .lastOrNull { !CustomImdn.isReceipt(it) }
+        } else {
+            latestMessage
+        }
+        if (message == null || CustomImdn.key(message) != customReceiptState?.first) {
+            customReceiptState = null
+        }
         if (message != null) {
             lastMessage = message
             updateLastMessageStatus(message)

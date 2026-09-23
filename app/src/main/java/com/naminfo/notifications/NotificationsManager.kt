@@ -61,6 +61,7 @@ import com.naminfo.utils.AppUtils
 import com.naminfo.utils.FileUtils
 import com.naminfo.utils.LinphoneUtils
 import com.naminfo.utils.ShortcutUtils
+import com.naminfo.core.CustomImdn
 
 class NotificationsManager
     @MainThread
@@ -300,7 +301,13 @@ class NotificationsManager
             chatRoom: ChatRoom,
             messages: Array<ChatMessage>
         ) {
-            Log.i("$TAG Received [${messages.size}] aggregated messages")
+
+            val visibleMessages = messages.filter {
+                it != null && !CustomImdn.isReceipt(it)
+            }.toTypedArray()
+
+            if (visibleMessages.isEmpty()) return
+            Log.i("$TAG Received [${visibleMessages.size}] visible aggregated messages")
             if (corePreferences.disableChat) return
 
             val id = LinphoneUtils.getConversationId(chatRoom)
@@ -310,7 +317,7 @@ class NotificationsManager
                 )
 
                 var playSound = false
-                for (message in messages) {
+                for (message in visibleMessages) {
                     if (!message.isOutgoing && !message.isRead) {
                         playSound = true
                         break
@@ -327,7 +334,7 @@ class NotificationsManager
                 return
             }
 
-            showChatRoomNotification(chatRoom, messages)
+            showChatRoomNotification(chatRoom, visibleMessages)
         }
 
         @WorkerThread
@@ -1858,15 +1865,10 @@ class NotificationsManager
             "$TAG Trying to start keep alive for third party accounts foreground Service using call notification"
         )
 
+        // A restarted service can arrive before the Core creates its channels.
+        // Even when notifications are blocked, Android requires foreground promotion.
+        createThirdPartyAccountKeepAliveServiceChannel()
         val channelId = context.getString(R.string.notification_channel_service_id)
-        val channel = notificationManager.getNotificationChannel(channelId)
-        val importance = channel?.importance ?: NotificationManagerCompat.IMPORTANCE_NONE
-        if (importance == NotificationManagerCompat.IMPORTANCE_NONE) {
-            Log.e(
-                "$TAG Keep alive for third party accounts Service channel has been disabled, can't start foreground Service!"
-            )
-            return
-        }
 
         val service = keepAliveService
         if (service != null) {
@@ -1907,6 +1909,8 @@ class NotificationsManager
             )
             if (!success) {
                 Log.e("$TAG Failed to start keep alive foreground Service!")
+                service.stopSelf()
+                return
             }
             currentKeepAliveThirdPartyAccountsForegroundServiceNotificationId = KEEP_ALIVE_FOR_THIRD_PARTY_ACCOUNTS_ID
         } else {

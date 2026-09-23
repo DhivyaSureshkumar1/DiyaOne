@@ -30,7 +30,12 @@ import com.naminfo.utils.DialogUtils
 import com.naminfo.utils.Event
 import androidx.core.net.toUri
 import android.widget.Toast
+import android.widget.ArrayAdapter
+import android.widget.LinearLayout
+import android.widget.ListView
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.SearchView
 import com.naminfo.ui.main.contacts.viewmodel.ConferenceCallViewModel
 import com.naminfo.ui.main.contacts.viewmodel.ContactsListViewModel
 
@@ -294,10 +299,69 @@ class ContactFragment : SlidingPaneChildFragment() {
             return
         }
 
-        val selected = BooleanArray(participants.size)
-        val labels = participants.map {
-            "${it.name}\n${it.number}"
-        }.toTypedArray()
+        val selectedNumbers = mutableSetOf<String>()
+        var visibleParticipants = participants
+        val pickerContext = requireContext()
+        val density = resources.displayMetrics.density
+        val content = LinearLayout(pickerContext).apply {
+            orientation = LinearLayout.VERTICAL
+            val padding = (16 * density).toInt()
+            setPadding(padding, 0, padding, 0)
+        }
+        val search = SearchView(pickerContext).apply {
+            setIconifiedByDefault(false)
+            queryHint = getString(R.string.conference_participant_search_hint)
+        }
+        val participantAdapter = ArrayAdapter(
+            pickerContext,
+            android.R.layout.simple_list_item_multiple_choice,
+            participants.map { "${it.name}\n${it.number}" }.toMutableList()
+        )
+        val participantList = ListView(pickerContext).apply {
+            choiceMode = ListView.CHOICE_MODE_MULTIPLE
+            adapter = participantAdapter
+        }
+        val emptyResults = TextView(pickerContext).apply {
+            text = getString(R.string.conference_participant_search_empty)
+            gravity = android.view.Gravity.CENTER
+            visibility = View.GONE
+        }
+        content.addView(search)
+        val listHeight = minOf((320 * density).toInt(), resources.displayMetrics.heightPixels / 2)
+        content.addView(participantList, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, listHeight))
+        content.addView(emptyResults, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, listHeight))
+        participantList.emptyView = emptyResults
+
+        participantList.setOnItemClickListener { _, _, position, _ ->
+            val number = visibleParticipants[position].number
+            if (participantList.isItemChecked(position)) {
+                selectedNumbers.add(number)
+            } else {
+                selectedNumbers.remove(number)
+            }
+        }
+        search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                search.clearFocus()
+                return true
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                val query = newText.orEmpty().trim()
+                visibleParticipants = participants.filter {
+                    it.name.contains(query, ignoreCase = true) || it.number.contains(query)
+                }
+                participantAdapter.setNotifyOnChange(false)
+                participantAdapter.clear()
+                participantAdapter.addAll(visibleParticipants.map { "${it.name}\n${it.number}" })
+                participantAdapter.notifyDataSetChanged()
+                participantList.clearChoices()
+                visibleParticipants.forEachIndexed { index, participant ->
+                    participantList.setItemChecked(index, participant.number in selectedNumbers)
+                }
+                return true
+            }
+        })
 
         val dialog = AlertDialog.Builder(requireContext())
             .setTitle(
@@ -307,9 +371,7 @@ class ContactFragment : SlidingPaneChildFragment() {
                     "Select audio conference users"
                 }
             )
-            .setMultiChoiceItems(labels, selected) { _, index, checked ->
-                selected[index] = checked
-            }
+            .setView(content)
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Call", null)
             .create()
@@ -323,8 +385,8 @@ class ContactFragment : SlidingPaneChildFragment() {
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)
                 .setOnClickListener {
-                    val selectedParticipants = participants.filterIndexed { index, _ ->
-                        selected[index]
+                    val selectedParticipants = participants.filter {
+                        it.number in selectedNumbers
                     }
 
                     if (selectedParticipants.isEmpty()) {
@@ -355,6 +417,7 @@ class ContactFragment : SlidingPaneChildFragment() {
         }
 
         dialog.show()
+        search.clearFocus()
     }
 
     override fun onPause() {

@@ -23,7 +23,7 @@ class CoreKeepAliveThirdPartyAccountsService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.i("$TAG onStartCommand")
         coreContext.notificationsManager.onKeepAliveServiceStarted(this)
-        return super.onStartCommand(intent, flags, startId)
+        return START_STICKY
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -34,6 +34,9 @@ class CoreKeepAliveThirdPartyAccountsService : Service() {
     override fun onDestroy() {
         Log.i("$TAG onDestroy")
         coreContext.notificationsManager.onKeepAliveServiceDestroyed()
+        coreContext.postOnCoreThread {
+            coreContext.onKeepAliveServiceDestroyed()
+        }
         super.onDestroy()
     }
 

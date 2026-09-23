@@ -133,7 +133,7 @@ class ThirdPartySipAccountLoginFragment : GenericFragment() {
                 override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                     val selectedView = super.getView(position, convertView, parent)
                     (selectedView as? android.widget.TextView)?.text =
-                        plans.getOrNull(position - 1)?.let { "+${it.countryCallingCode}" }.orEmpty()
+                        plans.getOrNull(position - 1)?.let { "${it.flag} +${it.countryCallingCode}" }.orEmpty()
                     return selectedView
                 }
             }

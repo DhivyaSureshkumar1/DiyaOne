@@ -22,6 +22,7 @@ import com.naminfo.DiyaOneApplication.Companion.coreContext
 import com.naminfo.DiyaOneApplication.Companion.corePreferences
 import com.naminfo.R
 import com.naminfo.contacts.ContactsManager.ContactsListener
+import com.naminfo.core.CustomImdn
 import org.linphone.core.Address
 import org.linphone.core.AudioDevice
 import org.linphone.core.Call
@@ -498,6 +499,11 @@ class CurrentCallViewModel
             chatRoom: ChatRoom,
             messages: Array<out ChatMessage>
         ) {
+            val visibleMessages = messages.filter {
+                it != null && !CustomImdn.isReceipt(it)
+            }.toTypedArray()
+
+            if (visibleMessages.isEmpty()) return
             if (::currentCall.isInitialized) {
                 if (currentCallConversation == null) {
                     currentCallConversation = lookupCurrentCallConversation(currentCall)

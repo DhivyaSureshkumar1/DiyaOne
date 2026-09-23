@@ -29,6 +29,7 @@ import com.naminfo.utils.Event
 import com.naminfo.utils.FileUtils
 import com.naminfo.utils.LinphoneUtils
 import androidx.core.net.toUri
+import com.naminfo.core.CustomImdn
 
 class ConversationViewModel
     @UiThread
@@ -181,6 +182,7 @@ class ConversationViewModel
 
         @WorkerThread
         override fun onChatMessagesReceived(chatRoom: ChatRoom, eventLogs: Array<EventLog>) {
+            if (eventLogs.all { CustomImdn.isReceipt(it.chatMessage) }) return
             Log.i("$TAG Received [${eventLogs.size}] new message(s)")
             computeComposingLabel()
 
@@ -527,35 +529,34 @@ class ConversationViewModel
     fun loadMoreData(totalItemsCount: Int) {
         if (!isChatRoomInitialized()) return
         coreContext.postOnCoreThread {
-            val maxSize: Int = chatRoom.historyEventsSize
-            Log.i("$TAG Loading more data, current total is $totalItemsCount, max size is $maxSize")
+            // Visible bubbles are not database offsets: receipts are filtered out.
+            // Read strictly before the oldest displayed event instead.
+            val oldestEvent = eventsList.firstOrNull()?.eventLog
+            val maxSize = chatRoom.historyEventsSize
+            val mask = HistoryFilter.ChatMessage.toInt() or HistoryFilter.InfoNoDevice.toInt()
+            var requested = minOf(MESSAGES_PER_PAGE, maxSize)
+            Log.i("$TAG Loading older history before displayed events, visible count=$totalItemsCount")
 
-            if (totalItemsCount < maxSize) {
-                var upperBound: Int = totalItemsCount + MESSAGES_PER_PAGE
-                if (upperBound > maxSize) {
-                    upperBound = maxSize
+            while (requested > 0) {
+                val history = if (oldestEvent == null) {
+                    chatRoom.getHistory(requested, mask)
+                } else {
+                    // getHistoryRangeNear includes the anchor as the final event.
+                    chatRoom.getHistoryRangeNear(requested, 0, oldestEvent, mask)
+                        .dropLast(1).toTypedArray()
+                }
+                val visible = filterMessageEvents(history, eventsList.map { it.eventLog })
+                if (visible.isNotEmpty()) {
+                    Log.i("$TAG Prepending [${visible.size}] previously undisplayed events")
+                    prependEvents(visible)
+                    return@postOnCoreThread
                 }
 
-                val history = chatRoom.getHistoryRangeEvents(totalItemsCount, upperBound)
-                val list = getEventsListFromHistory(history)
-
-                val lastEvent = list.lastOrNull()
-                val newEvent = eventsList.firstOrNull()
-                if (lastEvent != null && lastEvent.model is MessageModel && newEvent != null && newEvent.model is MessageModel && shouldWeGroupTwoEvents(
-                        newEvent.eventLog,
-                        lastEvent.eventLog
-                    )
-                ) {
-                    lastEvent.model.groupedWithNextMessage.postValue(true)
-                    newEvent.model.groupedWithPreviousMessage.postValue(true)
-                }
-
-                Log.i("$TAG More data loaded, adding it to conversation events list")
-                list.addAll(eventsList)
-                eventsList = list
-                updateEvents.postValue(Event(true))
-                isEmpty.postValue(eventsList.isEmpty())
+                // Skip receipt-only pages, but stop at the beginning of history.
+                if (history.size < requested || requested >= maxSize) break
+                requested = minOf(requested + MESSAGES_PER_PAGE, maxSize)
             }
+            Log.i("$TAG No older visible events to load")
         }
     }
 
@@ -712,22 +713,7 @@ class ConversationViewModel
 
         // Prevents message duplicates
         val eventsToAdd = arrayListOf<EventLog>()
-        for (event in eventLogs) {
-            if (event.chatMessage != null && event.chatMessage?.messageId.orEmpty().isNotEmpty()) {
-                val found = list.find {
-                    it.model is MessageModel && it.model.chatMessage.messageId == event.chatMessage?.messageId
-                }
-                if (found == null) {
-                    eventsToAdd.add(event)
-                } else {
-                    Log.w(
-                        "$TAG Received message with ID [${event.chatMessage?.messageId}] is already displayed, do not add it again"
-                    )
-                }
-            } else {
-                eventsToAdd.add(event)
-            }
-        }
+        eventsToAdd.addAll(filterMessageEvents(eventLogs, list.map { it.eventLog }))
 
         val newList = getEventsListFromHistory(
             eventsToAdd.toTypedArray()
@@ -758,7 +744,7 @@ class ConversationViewModel
 
         // Prevents message duplicates
         val eventsToAdd = arrayListOf<EventLog>()
-        eventsToAdd.addAll(eventLogs)
+        eventsToAdd.addAll(filterMessageEvents(eventLogs, eventsList.map { it.eventLog }))
 
         val newList = getEventsListFromHistory(
             eventsToAdd.toTypedArray()
@@ -840,18 +826,54 @@ class ConversationViewModel
     }
 
     @WorkerThread
+    private fun messageEventKey(event: EventLog): String? {
+        if (event.type != EventLog.Type.ConferenceChatMessage) return null
+        val message = event.chatMessage ?: return null
+        val customId = CustomImdn.id(message)
+            ?: message.getCustomHeader("X-Diya-Message-ID")?.takeIf { it.isNotBlank() }
+        val identity = if (customId != null) {
+            "custom:$customId"
+        } else {
+            message.messageId.takeIf { it.isNotBlank() }?.let { "native:$it" } ?: return null
+        }
+        return "${message.isOutgoing}|${message.fromAddress.asStringUriOnly()}|$identity"
+    }
+
+    @WorkerThread
+    private fun filterMessageEvents(
+        incoming: Array<EventLog>,
+        existing: List<EventLog> = emptyList()
+    ): Array<EventLog> {
+        val seen = existing.mapNotNull { messageEventKey(it) }.toMutableSet()
+        return incoming.filter { event ->
+            if (CustomImdn.isReceipt(event.chatMessage)) {
+                false
+            } else {
+                val key = messageEventKey(event)
+                val keep = key == null || seen.add(key)
+                if (!keep) Log.i("$TAG Skipping duplicate message event [$key]")
+                keep
+            }
+        }.toTypedArray()
+    }
+
+    @WorkerThread
     private fun getEventsListFromHistory(
         history: Array<EventLog>
     ): ArrayList<EventLogModel> {
         val eventsList = arrayListOf<EventLogModel>()
         val groupedEventLogs = arrayListOf<EventLog>()
+        val visibleHistory = filterMessageEvents(history)
 
-        if (history.size == 1) {
+        if (visibleHistory.size == 1) {
             // If there is a single event, improve processing speed by skipping grouping tasks
-            val event = history[0]
-            eventsList.addAll(processGroupedEvents(arrayListOf(event)))
+            val event = visibleHistory[0]
+            if (!CustomImdn.isReceipt(event.chatMessage)) {
+                eventsList.addAll(processGroupedEvents(arrayListOf(event)))
+            }
         } else {
-            for (event in history) {
+            for (event in visibleHistory) {
+                if (CustomImdn.isReceipt(event.chatMessage)) continue
                 if (groupedEventLogs.isEmpty()) {
                     groupedEventLogs.add(event)
                     continue

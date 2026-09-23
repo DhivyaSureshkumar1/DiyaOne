@@ -7,6 +7,7 @@ import com.naminfo.DiyaOneApplication.Companion.coreContext
 import com.naminfo.DiyaOneApplication.Companion.corePreferences
 import com.naminfo.R
 import com.naminfo.contacts.ContactsManager
+import com.naminfo.core.CustomImdn
 import org.linphone.core.Address
 import org.linphone.core.ChatMessage
 import org.linphone.core.ChatRoom
@@ -110,6 +111,12 @@ class ConversationsListViewModel
             chatRoom: ChatRoom,
             messages: Array<out ChatMessage>
         ) {
+
+            val visibleMessages = messages.filter {
+                it != null && !CustomImdn.isReceipt(it)
+            }.toTypedArray()
+
+            if (visibleMessages.isEmpty()) return
             val id = LinphoneUtils.getConversationId(chatRoom)
             val found = conversations.value.orEmpty().find {
                 it.conversationModel?.id == id

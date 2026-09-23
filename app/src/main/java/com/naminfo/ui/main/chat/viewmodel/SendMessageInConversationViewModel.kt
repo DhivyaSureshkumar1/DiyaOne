@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import com.naminfo.DiyaOneApplication.Companion.coreContext
 import com.naminfo.DiyaOneApplication.Companion.corePreferences
 import com.naminfo.R
+import com.naminfo.core.CustomImdn
 import org.linphone.core.ChatMessage
 import org.linphone.core.ChatRoom
 import org.linphone.core.ChatRoomListenerStub
@@ -364,6 +365,11 @@ class SendMessageInConversationViewModel
 
             if (message.contents.isNotEmpty()) {
                 Log.i("$TAG Sending message")
+                // val customMessageId = java.util.UUID.randomUUID().toString()
+                // message.addCustomHeader("X-Diya-Message-ID", customMessageId)
+
+                // Log.i("[Custom IMDN] Sending original message id=$customMessageId")
+                CustomImdn.prepareOutgoing(message)
                 message.send()
                 messageSentEvent.postValue(Event(message))
             }
@@ -505,12 +511,28 @@ class SendMessageInConversationViewModel
         coreContext.postOnCoreThread {
             if (::chatRoom.isInitialized) {
                 val messageToForward = toForward.chatMessage
-                val forwardedMessage = chatRoom.createForwardMessage(messageToForward)
-                Log.i("$TAG Sending forwarded message")
+                val forwardedMessage =
+                    chatRoom.createForwardMessage(messageToForward)
+
+                // Each forward is a new message.
+                // Clear any copied custom ID and receipt state.
+                forwardedMessage.appdata = null
+                forwardedMessage.removeCustomHeader("X-Diya-Message-ID")
+
+                CustomImdn.prepareOutgoing(forwardedMessage)
+
+                Log.i(
+                    "$TAG Sending forwarded message " +
+                            "customId=${CustomImdn.id(forwardedMessage)}"
+                )
+
                 forwardedMessage.send()
                 messageSentEvent.postValue(Event(forwardedMessage))
 
-                showGreenToast(R.string.conversation_message_forwarded_toast, R.drawable.forward)
+                showGreenToast(
+                    R.string.conversation_message_forwarded_toast,
+                    R.drawable.forward
+                )
             }
         }
     }

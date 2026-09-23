@@ -8,6 +8,7 @@ import androidx.lifecycle.MutableLiveData
 import com.naminfo.DiyaOneApplication.Companion.coreContext
 import com.naminfo.R
 import com.naminfo.contacts.AbstractAvatarModel
+import com.naminfo.core.CustomImdn
 import org.linphone.core.Account
 import org.linphone.core.AccountListenerStub
 import org.linphone.core.ChatMessage
@@ -104,6 +105,11 @@ class AccountModel
             chatRoom: ChatRoom,
             messages: Array<out ChatMessage>
         ) {
+            val visibleMessages = messages.filter {
+                it != null && !CustomImdn.isReceipt(it)
+            }.toTypedArray()
+
+            if (visibleMessages.isEmpty()) return
             computeNotificationsCount()
         }
     }

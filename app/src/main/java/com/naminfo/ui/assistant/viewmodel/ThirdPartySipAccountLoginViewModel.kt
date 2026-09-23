@@ -136,7 +136,14 @@ class ThirdPartySipAccountLoginViewModel
         availableTransports.add(TransportType.Tls.name.uppercase(Locale.getDefault()))
 
         coreContext.postOnCoreThread {
-            countryDialPlans.postValue(Factory.instance().dialPlans.toList())
+            val orderedDialPlans = Factory.instance().dialPlans.toList().sortedBy {
+                when {
+                    it.isoCountryCode.equals("IN", ignoreCase = true) -> 0
+                    it.isoCountryCode.equals("US", ignoreCase = true) -> 1
+                    else -> 2
+                }
+            }
+            countryDialPlans.postValue(orderedDialPlans)
             domain.postValue(
                 corePreferences.thirdPartySipAccountDefaultDomain.ifBlank {
                     corePreferences.defaultDomain

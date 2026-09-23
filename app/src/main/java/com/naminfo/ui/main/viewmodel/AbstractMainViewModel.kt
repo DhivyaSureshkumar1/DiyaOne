@@ -5,6 +5,7 @@ import androidx.annotation.WorkerThread
 import androidx.lifecycle.MutableLiveData
 import com.naminfo.DiyaOneApplication.Companion.coreContext
 import com.naminfo.DiyaOneApplication.Companion.corePreferences
+import com.naminfo.core.CustomImdn
 import org.linphone.core.Account
 import org.linphone.core.Call
 import org.linphone.core.ChatMessage
@@ -113,6 +114,11 @@ open class AbstractMainViewModel
             chatRoom: ChatRoom,
             messages: Array<out ChatMessage>
         ) {
+            val visibleMessages = messages.filter {
+                it != null && !CustomImdn.isReceipt(it)
+            }.toTypedArray()
+
+            if (visibleMessages.isEmpty()) return
             computeUnreadMessagesCount()
         }
 

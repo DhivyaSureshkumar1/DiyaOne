@@ -277,6 +277,13 @@ abstract class AddressSelectionViewModel
     }
 
     @WorkerThread
+    protected fun refreshContactSearch() {
+        magicSearch.resetSearchCache()
+        favouritesMagicSearch.resetSearchCache()
+        applyFilter(currentFilter, magicSearchSourceFlags)
+    }
+
+    @WorkerThread
     private fun applyFilter(
         filter: String,
         sources: Int

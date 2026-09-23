@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.onEach
 import com.naminfo.DiyaOneApplication.Companion.coreContext
 import com.naminfo.DiyaOneApplication.Companion.corePreferences
 import com.naminfo.R
+import com.naminfo.core.CustomImdn
 import org.linphone.core.Address
 import org.linphone.core.ChatMessage
 import org.linphone.core.ChatMessageListenerStub
@@ -196,19 +197,33 @@ class MessageModel
     private var transferringFileModel: FileModel? = null
 
     private var allFilesDownloaded = true
+    private var customReceiptState: ChatMessage.State? = null
+
+    private val customReceiptObserver:
+                (String, ChatMessage.State) -> Unit = { messageKey, state ->
+        if (isOutgoing && CustomImdn.key(chatMessage) == messageKey) {
+            customReceiptState = state
+            statusIcon.postValue(LinphoneUtils.getChatIconResId(state))
+            isInError.postValue(false)
+        }
+    }
+
+    private fun deliveryState(): ChatMessage.State =
+        customReceiptState ?: CustomImdn.effectiveState(chatMessage)
 
     private val chatMessageListener = object : ChatMessageListenerStub() {
         @WorkerThread
         override fun onMsgStateChanged(message: ChatMessage, messageState: ChatMessage.State?) {
             Log.i("$TAG Chat message [${message.messageId}] state changed to [$messageState]")
             if (messageState != ChatMessage.State.FileTransferDone && messageState != ChatMessage.State.FileTransferInProgress) {
-                statusIcon.postValue(LinphoneUtils.getChatIconResId(chatMessage.state))
-
+                // statusIcon.postValue(LinphoneUtils.getChatIconResId(chatMessage.state))
+                statusIcon.postValue(LinphoneUtils.getChatIconResId(deliveryState()))
                 if (messageState == ChatMessage.State.Displayed) {
                     isRead = chatMessage.isRead
                 }
             }
-            isInError.postValue(messageState == ChatMessage.State.NotDelivered)
+            // isInError.postValue(messageState == ChatMessage.State.NotDelivered)
+            isInError.postValue(deliveryState() == ChatMessage.State.NotDelivered)
         }
 
         @WorkerThread
@@ -282,8 +297,8 @@ class MessageModel
     init {
         updateAvatarModel()
 
-        isInError.postValue(chatMessage.state == ChatMessage.State.NotDelivered)
-
+        // // isInError.postValue(chatMessage.state == ChatMessage.State.NotDelivered)
+        isInError.postValue(deliveryState() == ChatMessage.State.NotDelivered)
         groupedWithNextMessage.postValue(isGroupedWithNextOne)
         groupedWithPreviousMessage.postValue(isGroupedWithPreviousOne)
         isPlayingVoiceRecord.postValue(false)
@@ -291,7 +306,8 @@ class MessageModel
         updateEphemeralTimer()
 
         chatMessage.addListener(chatMessageListener)
-        statusIcon.postValue(LinphoneUtils.getChatIconResId(chatMessage.state))
+        // statusIcon.postValue(LinphoneUtils.getChatIconResId(chatMessage.state))
+        statusIcon.postValue(LinphoneUtils.getChatIconResId(deliveryState()))
         updateReactionsList()
 
         hasBeenEdited.postValue(chatMessage.isEdited && !chatMessage.isRetracted)
@@ -312,6 +328,8 @@ class MessageModel
                 }
             }
         }
+
+        CustomImdn.addObserver(customReceiptObserver)
     }
 
     @WorkerThread
@@ -326,6 +344,7 @@ class MessageModel
         }
 
         chatMessage.removeListener(chatMessageListener)
+        CustomImdn.removeObserver(customReceiptObserver)
     }
 
     @UiThread
@@ -348,6 +367,7 @@ class MessageModel
     fun resend() {
         coreContext.postOnCoreThread {
             Log.i("$TAG Re-sending message with ID [$id]")
+            CustomImdn.prepareOutgoing(chatMessage)
             chatMessage.send()
         }
     }
@@ -380,6 +400,7 @@ class MessageModel
         coreContext.postOnCoreThread {
             Log.i("$TAG Marking chat message with ID [$id] as read")
             chatMessage.markAsRead()
+            CustomImdn.messageRead(chatMessage)
         }
     }
 

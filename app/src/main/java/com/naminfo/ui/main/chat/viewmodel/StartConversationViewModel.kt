@@ -7,7 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import com.naminfo.DiyaOneApplication.Companion.coreContext
 import com.naminfo.DiyaOneApplication.Companion.corePreferences
 import com.naminfo.R
-import com.naminfo.contacts.ContactLoader
+import com.naminfo.ui.main.contacts.model.ContactAvatarModel
 import org.linphone.core.Address
 import org.linphone.core.ChatRoom
 import org.linphone.core.ChatRoomListenerStub
@@ -30,52 +30,29 @@ class StartConversationViewModel
 
     override val automaticallySelectPreferredAddress = true
 
-    // Match the full address book before filtering to registered phone contacts.
+    // Search all matched contacts without truncating the picker.
     override val limitContactSearch = false
 
     override val contactSearchDomain = ""
 
-    private var nativePhoneNumbers = emptySet<String>()
+    val contactsLoading = MutableLiveData(false)
+    val contactsStatus = MutableLiveData("")
 
-    @WorkerThread
-    override fun additionalContacts(filter: String): List<Friend> {
-        if (!com.naminfo.BuildConfig.DEBUG) return emptyList()
-        return listOf("1001", "1002").mapNotNull { extension ->
-            val uri = "sip:$extension@192.168.1.82"
-            if (filter.isNotBlank() && !uri.contains(filter.trim(), ignoreCase = true)) {
-                return@mapNotNull null
-            }
-            coreContext.core.createFriendWithAddress(uri)?.apply {
-                name = extension
-                refKey = "local-test:$extension"
-            }
+    // Owned by MatchedContactsViewModel; access this set only on the Core thread.
+    private var matchedFriends = emptySet<Friend>()
+
+    @UiThread
+    fun setMatchedContacts(contacts: List<ContactAvatarModel>) {
+        val friends = contacts.map { it.friend }
+        coreContext.postOnCoreThread {
+            matchedFriends = friends.toSet()
+            refreshContactSearch()
         }
-    }
-
-    @WorkerThread
-    override fun beforeProcessingSearchResults() {
-        val nativeFriendList = coreContext.core.getFriendListByName(
-            ContactLoader.NATIVE_ADDRESS_BOOK_FRIEND_LIST
-        )
-        nativePhoneNumbers = nativeFriendList?.friends.orEmpty()
-            .flatMap { nativeFriend -> nativeFriend.phoneNumbers.asIterable() }
-            .map(::normalizePhoneNumber)
-            .filter(String::isNotEmpty)
-            .toSet()
     }
 
     @WorkerThread
     override fun shouldIncludeFriend(friend: Friend): Boolean {
-        if (!friend.refKey.orEmpty().startsWith("mobion:")) return false
-
-        return friend.phoneNumbers.any { number ->
-            normalizePhoneNumber(number) in nativePhoneNumbers
-        }
-    }
-
-    private fun normalizePhoneNumber(number: String): String {
-        val digits = number.filter(Char::isDigit)
-        return if (digits.length > 10) digits.takeLast(10) else digits
+        return friend in matchedFriends
     }
 
     val hideGroupChatButton = MutableLiveData<Boolean>()

@@ -12,6 +12,7 @@ import com.naminfo.DiyaOneApplication.Companion.coreContext
 import com.naminfo.DiyaOneApplication.Companion.corePreferences
 import com.naminfo.R
 import com.naminfo.compatibility.Compatibility
+import com.naminfo.core.CustomImdn
 import org.linphone.core.Account
 import org.linphone.core.Call
 import org.linphone.core.ChatMessage
@@ -177,6 +178,11 @@ class MainViewModel
             chatRoom: ChatRoom,
             messages: Array<out ChatMessage>
         ) {
+            val visibleMessages = messages.filter {
+                it != null && !CustomImdn.isReceipt(it)
+            }.toTypedArray()
+
+            if (visibleMessages.isEmpty()) return
             Log.i("$TAG Message(s) received, updating notifications count if needed")
             val account = LinphoneUtils.getAccountForAddress(chatRoom.localAddress)
             if (account != null && account != core.defaultAccount) {

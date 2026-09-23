@@ -1,6 +1,10 @@
 package com.naminfo.ui.main.chat.fragment
 
+import android.Manifest
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
+import com.naminfo.contacts.PhoneContactNumbers
+import com.naminfo.ui.main.contacts.viewmodel.MatchedContactsViewModel
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,11 +26,28 @@ import com.naminfo.utils.hideKeyboard
 class StartConversationFragment : GenericAddressPickerFragment() {
     companion object {
         private const val TAG = "[Start Conversation Fragment]"
+        private const val PERMISSION_REQUESTED = "new_chat_contacts_permission_requested"
     }
 
     private lateinit var binding: StartChatFragmentBinding
 
     override lateinit var viewModel: StartConversationViewModel
+
+    private lateinit var matchedViewModel: MatchedContactsViewModel
+    private var contactsPermissionRequested = false
+    private var permissionRequestInProgress = false
+
+    private val contactsPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        permissionRequestInProgress = false
+        if (::matchedViewModel.isInitialized) matchedViewModel.reload()
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        contactsPermissionRequested = savedInstanceState?.getBoolean(PERMISSION_REQUESTED) ?: false
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -39,6 +60,7 @@ class StartConversationFragment : GenericAddressPickerFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         viewModel = ViewModelProvider(this)[StartConversationViewModel::class.java]
+        matchedViewModel = ViewModelProvider(requireActivity())[MatchedContactsViewModel::class.java]
 
         postponeEnterTransition()
         super.onViewCreated(view, savedInstanceState)
@@ -56,6 +78,16 @@ class StartConversationFragment : GenericAddressPickerFragment() {
         }
 
         setupRecyclerView(binding.contactsList)
+
+        matchedViewModel.contacts.observe(viewLifecycleOwner) {
+            viewModel.setMatchedContacts(it)
+        }
+        matchedViewModel.loading.observe(viewLifecycleOwner) {
+            viewModel.contactsLoading.value = it
+        }
+        matchedViewModel.status.observe(viewLifecycleOwner) {
+            viewModel.contactsStatus.value = it
+        }
 
         viewModel.modelsList.observe(
             viewLifecycleOwner
@@ -83,8 +115,30 @@ class StartConversationFragment : GenericAddressPickerFragment() {
         viewModel.defaultAccountChangedEvent.observe(viewLifecycleOwner) {
             it.consume {
                 viewModel.updateGroupChatButtonVisibility()
+                matchedViewModel.reload(accountChanged = true)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!::matchedViewModel.isInitialized || permissionRequestInProgress) return
+
+        if (PhoneContactNumbers.hasPermission(requireContext())) {
+            matchedViewModel.reload()
+        } else if (!contactsPermissionRequested) {
+            contactsPermissionRequested = true
+            permissionRequestInProgress = true
+            matchedViewModel.reload()
+            contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        } else {
+            matchedViewModel.reload()
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(PERMISSION_REQUESTED, contactsPermissionRequested)
+        super.onSaveInstanceState(outState)
     }
 
     private fun showGroupConversationSubjectDialog() {
