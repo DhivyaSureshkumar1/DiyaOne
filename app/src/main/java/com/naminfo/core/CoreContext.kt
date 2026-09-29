@@ -372,6 +372,7 @@ class CoreContext
                     }
                 }
                 Call.State.OutgoingInit -> {
+                    LinphoneUtils.rememberOutgoingCallMedia(call)
                     val conferenceInfo = core.findConferenceInformationFromUri(call.remoteAddress)
                     // Do not show outgoing call view for conference calls, wait for connected state
                     if (conferenceInfo == null) {

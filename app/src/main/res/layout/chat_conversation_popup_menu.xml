@@ -27,6 +27,9 @@
             name="documentsClickListener"
             type="View.OnClickListener" />
         <variable
+            name="translateClickListener"
+            type="View.OnClickListener" />
+        <variable
             name="conversationMuted"
             type="Boolean" />
         <variable
@@ -136,7 +139,21 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/media"
+            app:layout_constraintBottom_toTopOf="@id/translate"/>
+
+        <androidx.appcompat.widget.AppCompatTextView
+            style="@style/popup_menu_item"
+            android:id="@+id/translate"
+            android:onClick="@{translateClickListener}"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/incoming_message_translation_title"
+            android:drawableStart="@drawable/globe"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/documents"
             app:layout_constraintBottom_toTopOf="@id/bottom_anchor"/>
+
 
         <View
             android:id="@+id/bottom_anchor"
@@ -146,7 +163,7 @@
             app:layout_constraintWidth_max="@dimen/popup_menu_width"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/documents"
+            app:layout_constraintTop_toBottomOf="@id/translate"
             app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

@@ -17,6 +17,9 @@
         <variable
             name="onCallClickListener"
             type="View.OnClickListener" />
+        <variable
+            name="onAddContactClickListener"
+            type="View.OnClickListener" />
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -78,7 +81,7 @@
             android:textSize="12sp"
             app:layout_constraintStart_toEndOf="@id/call_status"
             app:layout_constraintTop_toBottomOf="@id/call_log_display_name"
-            app:layout_constraintBottom_toTopOf="@id/separator"/>
+            app:layout_constraintBottom_toTopOf="@id/add_contact"/>
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/call_media_type"
@@ -99,14 +102,33 @@
             android:layout_height="@dimen/large_icon_size"
             android:padding="5dp"
             android:layout_marginEnd="6dp"
-            android:src="@drawable/phone"
+            android:src="@{model.videoCall ? @drawable/video_camera : @drawable/phone}"
             android:background="@drawable/circle_transparent_button_background"
-            android:contentDescription="@string/content_description_call_start"
+            android:contentDescription="@{model.videoCall ? @string/content_description_call_start_video : @string/content_description_call_start}"
             android:visibility="@{model.wasConference ? View.GONE : View.VISIBLE}"
             app:tint="?attr/color_main2_500"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/call_log_display_name"
             app:layout_constraintBottom_toBottomOf="@id/date_time" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/add_contact"
+            style="@style/default_text_style"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:gravity="center_vertical"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:text="@string/menu_add_address_to_contacts"
+            android:textColor="?attr/color_main1_500"
+            android:background="?attr/selectableItemBackground"
+            android:onClick="@{onAddContactClickListener}"
+            android:visibility="@{model.canAddToContacts ? View.VISIBLE : View.GONE}"
+            app:layout_constraintStart_toStartOf="@id/call_log_display_name"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/date_time"
+            app:layout_constraintBottom_toTopOf="@id/separator" />
 
         <View
             android:id="@+id/separator"

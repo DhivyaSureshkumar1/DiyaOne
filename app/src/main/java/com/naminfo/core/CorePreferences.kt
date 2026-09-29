@@ -11,6 +11,7 @@ import java.io.File
 import java.io.FileOutputStream
 import com.naminfo.DiyaOneApplication.Companion.coreContext
 import com.naminfo.contacts.ContactLoader.Companion.LINPHONE_ADDRESS_BOOK_FRIEND_LIST
+import com.naminfo.translation.ChatTranslationLanguage
 
 class CorePreferences
     @UiThread
@@ -510,6 +511,43 @@ class CorePreferences
         set(value) {
             config.setBool("app", "mdm_configured", value)
         }
+
+    // Global Received Message Translation Preference
+    var receivedChatTranslationLanguage: ChatTranslationLanguage
+        get() {
+            val code = config.getString("app", "received_chat_translation_language", "NONE")
+            return ChatTranslationLanguage.fromCode(code)
+        }
+        set(value) {
+            config.setString("app", "received_chat_translation_language", value.name)
+        }
+
+    // Individual Contact Translation Override
+    fun getContactTranslationOverride(conversationId: String): String? {
+        val key = "contact_translation_override_${conversationId.replace("[^a-zA-Z0-9_]".toRegex(), "_")}"
+        val valStr = config.getString("app", key, null)
+        return if (valStr.isNullOrEmpty() || valStr.equals("NONE", ignoreCase = true) || valStr.equals("USE_GLOBAL", ignoreCase = true)) null else valStr
+    }
+
+    fun setContactTranslationOverride(conversationId: String, languageCode: String?) {
+        val key = "contact_translation_override_${conversationId.replace("[^a-zA-Z0-9_]".toRegex(), "_")}"
+        if (languageCode.isNullOrEmpty() || languageCode.equals("NONE", ignoreCase = true) || languageCode.equals("USE_GLOBAL", ignoreCase = true)) {
+            config.cleanEntry("app", key)
+        } else {
+            config.setString("app", key, languageCode)
+        }
+    }
+
+    // Cached Translation Persistence
+    fun getPersistedTranslation(cacheKey: String): String? {
+        val key = "cached_translation_${cacheKey.replace("[^a-zA-Z0-9_]".toRegex(), "_")}"
+        return config.getString("translation_cache", key, null)
+    }
+
+    fun setPersistedTranslation(cacheKey: String, value: String) {
+        val key = "cached_translation_${cacheKey.replace("[^a-zA-Z0-9_]".toRegex(), "_")}"
+        config.setString("translation_cache", key, value)
+    }
 
     @UiThread
     fun copyAssetsFromPackage() {

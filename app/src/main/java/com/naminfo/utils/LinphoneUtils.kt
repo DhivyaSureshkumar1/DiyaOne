@@ -40,6 +40,34 @@ class LinphoneUtils {
     companion object {
         private const val TAG = "[Linphone Utils]"
 
+        private const val OUTGOING_VIDEO_LOG_PREFIX = "diyaone:outgoing:video:"
+        private const val OUTGOING_AUDIO_LOG_PREFIX = "diyaone:outgoing:audio:"
+
+        @WorkerThread
+        fun rememberOutgoingCallMedia(call: Call) {
+            val log = call.callLog
+            if (call.dir != Dir.Outgoing || !log.refKey.isNullOrEmpty()) return
+
+            // The SDK's video flag describes the final negotiated media, not the
+            // caller's original choice. Store that choice in the persistent log.
+            val prefix = if (call.params.isVideoEnabled) {
+                OUTGOING_VIDEO_LOG_PREFIX
+            } else {
+                OUTGOING_AUDIO_LOG_PREFIX
+            }
+            log.refKey = prefix + java.util.UUID.randomUUID().toString()
+        }
+
+        @WorkerThread
+        fun wasVideoCall(log: CallLog): Boolean {
+            if (log.dir == Dir.Outgoing) {
+                val reference = log.refKey.orEmpty()
+                if (reference.startsWith(OUTGOING_VIDEO_LOG_PREFIX)) return true
+                if (reference.startsWith(OUTGOING_AUDIO_LOG_PREFIX)) return false
+            }
+            return log.isVideoEnabled
+        }
+
         const val RECORDING_FILE_NAME_HEADER = "call_recording_"
 
         @WorkerThread

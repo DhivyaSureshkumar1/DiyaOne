@@ -1102,4 +1102,17 @@
     <string name="history_call_type_video_conference">Video conference</string>
     <string name="history_audio_call_outgoing">Outgoing audio call</string>
     <string name="history_video_call_outgoing">Outgoing video call</string>
+
+    <string name="show_translation_label">Show translation</string>
+    <string name="show_original_label">Show original</string>
+    <string name="incoming_message_translation_title">Incoming Message Translation</string>
+    <string name="use_global_label">Use global setting (%s)</string>
+
+    <string name="translation_language_none">None</string>
+    <string name="translation_language_tamil">Tamil</string>
+    <string name="translation_language_english">English</string>
+    <string name="translation_language_hindi">Hindi</string>
+    <string name="translation_language_chinese">Chinese</string>
+    <string name="translation_language_arabic">Arabic</string>
+    <string name="translation_language_spanish">Spanish</string>
 </resources>

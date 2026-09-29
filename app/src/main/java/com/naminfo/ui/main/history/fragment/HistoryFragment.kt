@@ -27,6 +27,7 @@ import com.naminfo.ui.main.history.viewmodel.HistoryViewModel
 import com.naminfo.utils.AppUtils
 import com.naminfo.utils.DialogUtils
 import com.naminfo.utils.Event
+import com.naminfo.utils.PhoneContactEditor
 
 @UiThread
 class HistoryFragment : SlidingPaneChildFragment() {
@@ -41,6 +42,7 @@ class HistoryFragment : SlidingPaneChildFragment() {
     private lateinit var adapter: ContactHistoryListAdapter
 
     private val args: HistoryFragmentArgs by navArgs()
+    private val phoneContactEditor = PhoneContactEditor(this)
 
     override fun goBack(): Boolean {
         sharedViewModel.closeSlidingPaneEvent.value = Event(true)
@@ -214,12 +216,9 @@ class HistoryFragment : SlidingPaneChildFragment() {
         popupView.disableAddContact = corePreferences.disableAddContact
 
         popupView.setAddToContactsListener {
-            val addressToAdd = viewModel.callLogModel.value?.displayedAddress.orEmpty()
-            Log.i("$TAG Navigating to new contact with pre-filled value [$addressToAdd]")
-            sharedViewModel.sipAddressToAddToNewContact = addressToAdd
-            sharedViewModel.displayNameToSetToNewContact = viewModel.callLogModel.value?.avatarModel?.contactName.orEmpty()
-            sharedViewModel.navigateToContactsEvent.value = Event(true)
-            sharedViewModel.showNewContactEvent.value = Event(true)
+            viewModel.callLogModel.value?.let { model ->
+                phoneContactEditor.open(model.address, model.avatarModel.contactName.orEmpty())
+            }
             popupWindow.dismiss()
         }
 

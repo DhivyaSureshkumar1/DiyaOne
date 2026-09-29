@@ -26,6 +26,7 @@ import com.naminfo.DiyaOneApplication.Companion.coreContext
 import com.naminfo.DiyaOneApplication.Companion.corePreferences
 import com.naminfo.R
 import com.naminfo.core.CustomImdn
+import com.naminfo.translation.ChatTranslationLanguage
 import org.linphone.core.Address
 import org.linphone.core.ChatMessage
 import org.linphone.core.ChatMessageListenerStub
@@ -176,6 +177,11 @@ class MessageModel
     }
 
     var isTextHighlighted = false
+
+    val translatedText = MutableLiveData<Spannable?>()
+    val showOriginal = MutableLiveData<Boolean>()
+    val isTranslating = MutableLiveData<Boolean>()
+    val effectiveTargetLanguage = MutableLiveData<ChatTranslationLanguage>()
 
     private var voiceRecordAudioFocusRequest: AudioFocusRequestCompat? = null
 
@@ -1081,5 +1087,19 @@ class MessageModel
                 }
             }
         }
+    }
+
+    @UiThread
+    fun toggleShowOriginal() {
+        val current = showOriginal.value ?: false
+        showOriginal.postValue(!current)
+    }
+
+    @UiThread
+    fun applyTranslation(translated: String, targetLanguage: ChatTranslationLanguage) {
+        effectiveTargetLanguage.postValue(targetLanguage)
+        translatedText.postValue(Spannable.Factory.getInstance().newSpannable(translated))
+        isTranslating.postValue(false)
+        showOriginal.postValue(false)
     }
 }

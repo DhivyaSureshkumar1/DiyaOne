@@ -244,6 +244,19 @@
                 android:includeFontPadding="@{!model.isTextEmoji}"
                 android:visibility="@{model.text.length() > 0 &amp;&amp; !model.hasBeenRetracted ? View.VISIBLE : View.GONE}"/>
 
+
+            <!-- Toggle Original/Translation Button -->
+            <TextView
+                android:id="@+id/translation_toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="12sp"
+                android:textColor="?attr/color_main1_500"
+                android:text="@{model.showOriginal ? @string/show_translation_label : @string/show_original_label}"
+                android:onClick="@{() -> model.toggleShowOriginal()}"
+                android:visibility="@{model.translatedText != null ? View.VISIBLE : View.GONE}" />
+
             <com.naminfo.ui.main.chat.view.ChatBubbleTextView
                 style="@style/default_text_style"
                 android:id="@+id/retracted_content"

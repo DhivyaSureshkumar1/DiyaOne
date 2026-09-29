@@ -41,7 +41,7 @@ class CallLogHistoryModel
         isVideoCall = if (isCustomConference) {
             isCustomVideoConference
         } else {
-            callLog.isVideoEnabled
+            LinphoneUtils.wasVideoCall(callLog)
         }
 
         isOutgoing.postValue(callLog.dir == Dir.Outgoing)

@@ -21,6 +21,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.UiThread
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.FileProvider
 import androidx.core.view.doOnPreDraw
@@ -76,7 +77,8 @@ import com.naminfo.utils.showKeyboard
 import androidx.core.net.toUri
 import com.naminfo.ui.main.chat.adapter.ConversationParticipantsAdapter
 import com.naminfo.utils.ShortcutUtils
-import kotlin.collections.arrayListOf
+import kotlin.collections.*
+import com.naminfo.DiyaOneApplication.Companion.corePreferences
 
 @UiThread
 open class ConversationFragment : SlidingPaneChildFragment() {
@@ -254,6 +256,44 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                 scrollToFirstUnreadMessageOrBottom()
             }
         }
+    }
+
+    private fun showContactTranslationDialog() {
+        val currentGlobal = corePreferences.receivedChatTranslationLanguage
+        val currentOverride = corePreferences.getContactTranslationOverride(viewModel.conversationId)
+        val globalLabel = "Use global preference (${currentGlobal.label})"
+
+        val options = arrayOf(
+            globalLabel, "Tamil", "English", "Hindi", "Chinese", "Arabic", "Spanish"
+        )
+
+        val selectedIndex = when (currentOverride?.uppercase()) {
+            "TA" -> 1
+            "EN" -> 2
+            "HI" -> 3
+            "ZH" -> 4
+            "AR" -> 5
+            "ES" -> 6
+            else -> 0
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Incoming Message Translation")
+            .setSingleChoiceItems(options, selectedIndex) { dialog, which ->
+                val newCode = when (which) {
+                    1 -> "TA"
+                    2 -> "EN"
+                    3 -> "HI"
+                    4 -> "ZH"
+                    5 -> "AR"
+                    6 -> "ES"
+                    else -> null
+                }
+                viewModel.setContactTranslationOverride(newCode)
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.dismiss() }
+            .show()
     }
 
     private val textObserver = object : TextWatcher {
@@ -1311,6 +1351,11 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                 findNavController().navigate(action)
             }
             popupWindow.dismiss()
+        }
+
+        popupView.setTranslateClickListener {
+            popupWindow.dismiss()
+            showContactTranslationDialog()
         }
 
         // Elevation is for showing a shadow around the popup

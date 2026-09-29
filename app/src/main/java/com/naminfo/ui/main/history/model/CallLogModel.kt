@@ -4,6 +4,7 @@ import androidx.annotation.IntegerRes
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import com.naminfo.DiyaOneApplication.Companion.coreContext
+import com.naminfo.DiyaOneApplication.Companion.corePreferences
 import com.naminfo.R
 import org.linphone.core.CallLog
 import org.linphone.core.tools.Log
@@ -46,6 +47,9 @@ class CallLogModel
 
     var friendExists: Boolean = false
 
+    val canAddToContacts: Boolean
+        get() = !friendExists && !wasConference && !corePreferences.disableAddContact
+
     init {
         val date = if (TimestampUtils.isToday(timestamp)) {
             AppUtils.getString(R.string.today)
@@ -66,7 +70,7 @@ class CallLogModel
         isVideoCall = if (isCustomConference) {
             isCustomVideoConference
         } else {
-            callLog.isVideoEnabled
+            LinphoneUtils.wasVideoCall(callLog)
         }
         if (wasConference) {
             val conferenceInfo = callLog.conferenceInfo

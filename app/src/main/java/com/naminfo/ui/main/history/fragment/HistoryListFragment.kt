@@ -29,6 +29,7 @@ import com.naminfo.utils.DialogUtils
 import com.naminfo.utils.Event
 import com.naminfo.utils.LinphoneUtils
 import com.naminfo.utils.RecyclerViewHeaderDecoration
+import com.naminfo.utils.PhoneContactEditor
 
 @UiThread
 class HistoryListFragment : AbstractMainFragment() {
@@ -43,6 +44,7 @@ class HistoryListFragment : AbstractMainFragment() {
     private lateinit var adapter: HistoryListAdapter
 
     private var bottomSheetDialog: BottomSheetDialogFragment? = null
+    private val phoneContactEditor = PhoneContactEditor(this)
 
     override fun onDefaultAccountChanged() {
         Log.i(
@@ -93,6 +95,12 @@ class HistoryListFragment : AbstractMainFragment() {
         val headerItemDecoration = RecyclerViewHeaderDecoration(requireContext(), adapter)
         binding.historyList.addItemDecoration(headerItemDecoration)
 
+        adapter.addContactClickedEvent.observe(viewLifecycleOwner) {
+            it.consume { model ->
+                phoneContactEditor.open(model.address, model.avatarModel.contactName.orEmpty())
+            }
+        }
+
         adapter.callLogLongClickedEvent.observe(viewLifecycleOwner) {
             it.consume { model ->
                 val modalBottomSheet = HistoryMenuDialogFragment(
@@ -101,15 +109,7 @@ class HistoryListFragment : AbstractMainFragment() {
                         adapter.resetSelection()
                     },
                     { // onAddToContact
-                        val addressToAdd = model.displayedAddress
-                        Log.i(
-                            "$TAG Navigating to new contact with pre-filled value [$addressToAdd]"
-                        )
-
-                        sharedViewModel.sipAddressToAddToNewContact = addressToAdd
-                        sharedViewModel.displayNameToSetToNewContact = model.avatarModel.contactName.orEmpty()
-                        sharedViewModel.navigateToContactsEvent.value = Event(true)
-                        sharedViewModel.showNewContactEvent.value = Event(true)
+                        phoneContactEditor.open(model.address, model.avatarModel.contactName.orEmpty())
                     },
                     { // onGoToContact
                         val friendRefKey = model.friendRefKey
@@ -162,7 +162,11 @@ class HistoryListFragment : AbstractMainFragment() {
                         )
                     } else {
                         Log.i("$TAG Starting call to [${model.address.asStringUriOnly()}]")
-                        coreContext.startAudioCall(model.address)
+                        if (model.isVideoCall) {
+                            coreContext.startVideoCall(model.address)
+                        } else {
+                            coreContext.startAudioCall(model.address)
+                        }
                     }
                 }
             }

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="phone_contact_editor_unavailable">Unable to open the phone contact editor. Check that a Contacts app is installed and enabled.</string>
+</resources>

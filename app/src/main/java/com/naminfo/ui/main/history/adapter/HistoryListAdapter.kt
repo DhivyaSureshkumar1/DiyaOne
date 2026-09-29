@@ -47,6 +47,10 @@ class HistoryListAdapter :
         MutableLiveData()
     }
 
+    val addContactClickedEvent: MutableLiveData<Event<CallLogModel>> by lazy {
+        MutableLiveData()
+    }
+
     val callFriendClickedEvent: MutableLiveData<Event<Friend>> by lazy {
         MutableLiveData()
     }
@@ -124,6 +128,11 @@ class HistoryListAdapter :
 
                     setOnCallClickListener {
                         callLogCallBackClickedEvent.value = Event(model!!)
+                    }
+                    setOnAddContactClickListener {
+                        model?.takeIf { it.canAddToContacts }?.let {
+                            addContactClickedEvent.value = Event(it)
+                        }
                     }
                 }
                 viewHolder
@@ -204,7 +213,9 @@ class HistoryListAdapter :
 
         override fun areContentsTheSame(oldItem: CallLogModelWrapper, newItem: CallLogModelWrapper): Boolean {
             if (oldItem.isCallLog && newItem.isCallLog) {
-                return newItem.callLogModel?.avatarModel?.compare(oldItem.callLogModel?.avatarModel) == true
+                return newItem.callLogModel?.isVideoCall == oldItem.callLogModel?.isVideoCall &&
+                    newItem.callLogModel?.friendExists == oldItem.callLogModel?.friendExists &&
+                    newItem.callLogModel?.avatarModel?.compare(oldItem.callLogModel?.avatarModel) == true
             }
             return false
         }

@@ -20,6 +20,8 @@ import com.naminfo.ui.main.history.model.CallLogModel
 import com.naminfo.utils.AppUtils
 import com.naminfo.utils.Event
 import com.naminfo.utils.LinphoneUtils
+import com.naminfo.contacts.ContactsManager
+import org.linphone.core.Friend
 
 class HistoryViewModel
     @UiThread
@@ -69,6 +71,20 @@ class HistoryViewModel
     private var callLocalAddress: Address? = null
 
     private var meetingChatRoom: ChatRoom? = null
+    private var displayedCallId: String? = null
+
+    private val contactsListener = object : ContactsManager.ContactsListener {
+        @WorkerThread
+        override fun onContactsLoaded() {
+            val id = displayedCallId ?: return
+            coreContext.core.findCallLogFromCallId(id)?.let {
+                callLogModel.postValue(CallLogModel(it))
+            }
+        }
+
+        @WorkerThread
+        override fun onContactFoundInRemoteDirectory(friend: Friend) { }
+    }
 
     private val coreListener = object : CoreListenerStub() {
         @WorkerThread
@@ -112,6 +128,7 @@ class HistoryViewModel
     init {
         coreContext.postOnCoreThread { core ->
             core.addListener(coreListener)
+            coreContext.contactsManager.addListener(contactsListener)
             chatDisabled.postValue(corePreferences.disableChat)
             videoCallDisabled.postValue(!core.isVideoEnabled)
             hideSipAddresses.postValue(corePreferences.hideSipAddresses)
@@ -124,12 +141,14 @@ class HistoryViewModel
 
         coreContext.postOnCoreThread { core ->
             core.removeListener(coreListener)
+            coreContext.contactsManager.removeListener(contactsListener)
         }
     }
 
     @UiThread
     fun findCallLogByCallId(callId: String) {
         coreContext.postOnCoreThread { core ->
+            displayedCallId = callId
             val callLog = core.findCallLogFromCallId(callId)
             if (callLog != null) {
                 address = callLog.remoteAddress

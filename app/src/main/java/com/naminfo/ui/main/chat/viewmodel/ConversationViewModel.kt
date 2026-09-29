@@ -29,7 +29,10 @@ import com.naminfo.utils.Event
 import com.naminfo.utils.FileUtils
 import com.naminfo.utils.LinphoneUtils
 import androidx.core.net.toUri
+import com.naminfo.DiyaOneApplication.Companion.corePreferences
 import com.naminfo.core.CustomImdn
+import com.naminfo.translation.ChatTranslationLanguage
+import com.naminfo.translation.TranslationRepository
 
 class ConversationViewModel
     @UiThread
@@ -1076,6 +1079,69 @@ class ConversationViewModel
                 } else {
                     Log.e("$TAG Failed to export file [$filePath] to documents!")
                     showRedToast(R.string.export_file_to_documents_error_toast, R.drawable.warning_circle)
+                }
+            }
+        }
+    }
+
+    fun resolveEffectiveLanguage(): ChatTranslationLanguage {
+        val overrideCode = corePreferences.getContactTranslationOverride(conversationId)
+        if (!overrideCode.isNullOrEmpty() && !overrideCode.equals("USE_GLOBAL", ignoreCase = true)) {
+            val contactLang = ChatTranslationLanguage.fromCode(overrideCode)
+            if (contactLang != ChatTranslationLanguage.NONE) return contactLang
+        }
+        return corePreferences.receivedChatTranslationLanguage
+    }
+
+    fun setContactTranslationOverride(languageCode: String?) {
+        corePreferences.setContactTranslationOverride(conversationId, languageCode)
+        checkAndTranslateIncomingMessages()
+    }
+
+    fun checkAndTranslateIncomingMessages() {
+        val effectiveLang = resolveEffectiveLanguage()
+        val toNumber = if (isChatRoomInitialized()) chatRoom.peerAddress.username ?: "" else ""
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentEvents = ArrayList(eventsList)
+            for (eventLogModel in currentEvents) {
+                val messageModel = eventLogModel.model as? MessageModel ?: continue
+                if (messageModel.isOutgoing) continue
+
+                val originalText = messageModel.getRawTextContent()
+                if (originalText.isBlank()) continue
+
+                if (effectiveLang == com.naminfo.translation.ChatTranslationLanguage.NONE) {
+                    coreContext.postOnMainThread {
+                        messageModel.translatedText.value = null
+                        messageModel.showOriginal.value = false
+                    }
+                    continue
+                }
+
+                val cached = com.naminfo.translation.TranslationRepository.getCachedTranslation(messageModel.id, effectiveLang)
+                if (cached != null) {
+                    coreContext.postOnMainThread {
+                        messageModel.applyTranslation(cached, effectiveLang)
+                    }
+                    continue
+                }
+
+                messageModel.isTranslating.postValue(true)
+                val result = com.naminfo.translation.TranslationRepository.translateMessage(
+                    messageModel.id,
+                    toNumber,
+                    originalText,
+                    effectiveLang
+                )
+
+                coreContext.postOnMainThread {
+                    if (result.isSuccess) {
+                        messageModel.applyTranslation(result.getOrNull().orEmpty(), effectiveLang)
+                    } else {
+                        messageModel.isTranslating.value = false
+                        messageModel.translatedText.value = null
+                    }
                 }
             }
         }
